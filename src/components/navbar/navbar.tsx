@@ -4,14 +4,14 @@ import Link from "next/link";
 
 const Navbar = () => {
   return (
-    <nav className="h-28 bg-pawnstorm-blue flex items-center justify-between px-6 sticky top-0 left-0 w-full">
+    <nav className="h-24 bg-pawnstorm-blue flex items-center justify-between px-6 sticky top-0 left-0 w-full">
       <Link href="/">
         <Image
           src="/images/PawnstormGoldLogo.png"
           alt="Gold Pawnstorm Logo"
           width={606}
           height={435}
-          className="h-20 w-auto"
+          className="h-16 w-auto"
         />
       </Link>
       <div className="flex gap-8">
@@ -21,7 +21,7 @@ const Navbar = () => {
       </div>
       <Link
         href="/"
-        className="w-28 h-28 text-pawnstorm-gold mt-4 transition-all duration-300 hover:cursor-pointer hover:text-pawnstorm-gold-hov"
+        className="w-24 h-24 text-pawnstorm-gold mt-4 transition-all duration-300 hover:cursor-pointer hover:text-pawnstorm-gold-hov"
       >
         <div className="ml-auto flex gap-1 items-center">
           <svg

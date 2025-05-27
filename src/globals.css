@@ -9,8 +9,9 @@
 
 @theme {
   --color-pawnstorm-blue: #0a1e3f;
+  /* --color-pawnstorm-blue: #447395; */
   --color-pawnstorm-gold: #ffd839;
-  --color-pawnstorm-gold-hov: #fff7d7;
+  --color-pawnstorm-gold-hov: #ffec9c;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

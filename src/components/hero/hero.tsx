@@ -30,7 +30,7 @@ export default function Hero() {
         </p>
         <Link
           href="/"
-          className="bg-pawnstorm-gold text-pawnstorm-blue font-bold text-2xl py-2 px-3 rounded-md z-30 mx-auto transition-all duration-300 hover:text-white"
+          className="bg-pawnstorm-gold text-pawnstorm-blue font-bold text-2xl py-2 px-3 rounded-md z-30 mx-auto transition-all duration-300 hover:bg-pawnstorm-gold-hov"
         >
           Play Now
         </Link>

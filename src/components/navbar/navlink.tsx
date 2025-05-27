@@ -15,7 +15,7 @@ export default function Navlink({
   return (
     <Link
       className={clsx(
-        "text-pawnstorm-gold text-2xl font-semibold transition-all duration-300 hover:cursor-pointer hover:text-pawnstorm-gold-hov",
+        "text-pawnstorm-blue text-2xl font-bold transition-all duration-300 hover:cursor-pointer hover:text-white",
         className
       )}
       {...props}

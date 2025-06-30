@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="relative flex h-[calc(100svh-6rem)] z-0">
+    <section className="relative flex h-[calc(100svh-5rem)] z-0">
       <video
         src="/images/PawnstormHeroVideoCompressed.mp4"
         autoPlay
@@ -13,7 +13,7 @@ export default function Hero() {
         className="absolute inset-0 w-full h-full object-cover z-10"
       />
       <div className="absolute inset-0 bg-black/30 z-20" />
-      <div className="flex flex-col gap-8 mx-auto my-auto">
+      <div className="flex flex-col gap-8 mx-auto my-auto animate-fadeIn z-30">
         <Image
           src="/images/PawnstormGoldLogo.png"
           alt="Gold Pawnstorm Logo"
@@ -29,8 +29,8 @@ export default function Hero() {
           analytics.
         </p>
         <Link
-          href="/"
-          className="bg-pawnstorm-gold text-pawnstorm-blue font-bold text-2xl py-2 px-3 rounded-md z-30 mx-auto transition-all duration-300 hover:bg-pawnstorm-gold-hov"
+          href="/play"
+          className="bg-pawnstorm-gold text-pawnstorm-blue font-bold text-2xl py-2 px-3 rounded-md z-30 mx-auto transition-all duration-300 hover:bg-white"
         >
           Play Now
         </Link>

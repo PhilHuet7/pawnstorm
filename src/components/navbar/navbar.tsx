@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const Navbar = () => {
   return (
-    <nav className="h-24 bg-pawnstorm-gold flex items-center justify-between px-6 sticky top-0 left-0 w-full">
+    <nav className="h-20 bg-pawnstorm-gold flex items-center justify-between px-6 sticky top-0 left-0 w-full z-50">
       <Link href="/">
         <Image
           src="/images/PawnstormDarkBlueLogo.png"
@@ -15,7 +15,8 @@ const Navbar = () => {
         />
       </Link>
       <div className="flex gap-8">
-        <Navlink href="/">Play</Navlink>
+        <Navlink href="/">About</Navlink>
+        <Navlink href="/play">Play</Navlink>
         <Navlink href="/">Account</Navlink>
         <Navlink href="/">Donate</Navlink>
       </div>

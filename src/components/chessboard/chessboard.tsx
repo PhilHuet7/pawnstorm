@@ -1,12 +1,23 @@
 "use client";
 
-import { Board } from "@/types/chess";
+import { Chess } from "chess.js";
+import { Board, Coord } from "@/types/chess";
 import { createInitialBoard } from "@/lib/board";
-import { useState } from "react";
-import { getPieceSymbol } from "@/lib/utils";
+import { useRef, useState } from "react";
+import { createBoardFromFEN, getPieceSymbol, toAlgebraic } from "@/lib/utils";
 
 const Chessboard = () => {
   const [board, setBoard] = useState<Board>(createInitialBoard());
+  const game = useRef(new Chess());
+  const movePiece = (from: Coord, to: Coord) => {
+    const move = game.current.move({
+      from: toAlgebraic(from),
+      to: toAlgebraic(to),
+    });
+    if (move) {
+      setBoard(createBoardFromFEN(game.current.fen()));
+    }
+  };
 
   return (
     <div className="grid grid-cols-8 w-[32rem] h-[32rem] border border-gray-700">

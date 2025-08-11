@@ -1,3 +1,4 @@
+import { colorMap, typeMap } from "@/adapters/chessjs";
 import { Board, PieceColor, PieceType } from "@/types/chess";
 import { Chess } from "chess.js";
 
@@ -28,17 +29,20 @@ export function toAlgebraic({
 }
 
 export function createBoardFromFEN(fen: string): Board {
-  const game = new Chess(fen);
-  // game.board() returns a 2d array of Piece|null
+  const game = new Chess();
+
+  try {
+    game.load(fen); // loads full FEN (placement + fields)
+  } catch {
+    game.reset();
+  }
+  // game.board() returns a 2d array of Piece|null. 8x8 top->bottom is ranks 8..1
   return game.board().map((row) =>
     row.map((cell) => {
-      const piece = cell
-        ? ({
-            type: cell.type as PieceType,
-            color: cell.color === "w" ? "white" : "black",
-          } as const)
-        : null;
-      return { piece };
+      if (!cell) return { piece: null };
+      return {
+        piece: { type: typeMap[cell.type], color: colorMap[cell.color] },
+      };
     })
   );
 }

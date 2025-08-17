@@ -1,15 +1,14 @@
-import { colorMap, typeMap } from "@/adapters/chessjs";
 import { Board, PieceColor, PieceType } from "@/types/chess";
 import { Chess } from "chess.js";
 
 export function getPieceSymbol(type: PieceType, color: PieceColor) {
-  const symbols: Record<string, { white: string; black: string }> = {
-    king: { white: "♔", black: "♚" },
-    queen: { white: "♕", black: "♛" },
-    rook: { white: "♖", black: "♜" },
-    bishop: { white: "♗", black: "♝" },
-    knight: { white: "♘", black: "♞" },
-    pawn: { white: "♙", black: "♟︎" },
+  const symbols: Record<string, { w: string; b: string }> = {
+    k: { w: "♔", b: "♚" },
+    q: { w: "♕", b: "♛" },
+    r: { w: "♖", b: "♜" },
+    b: { w: "♗", b: "♝" },
+    n: { w: "♘", b: "♞" },
+    p: { w: "♙", b: "♟︎" },
   };
 
   return symbols[type]?.[color] ?? "";
@@ -41,7 +40,7 @@ export function createBoardFromFEN(fen: string): Board {
     row.map((cell) => {
       if (!cell) return { piece: null };
       return {
-        piece: { type: typeMap[cell.type], color: colorMap[cell.color] },
+        piece: { type: cell.type, color: cell.color },
       };
     })
   );

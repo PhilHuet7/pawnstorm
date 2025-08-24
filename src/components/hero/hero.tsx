@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import ButtonLink from "../ui/buttonLink";
 
 export default function Hero() {
   return (
@@ -28,12 +28,9 @@ export default function Hero() {
           No ads. No fluff. Just the game — with lightning-fast play and sleek
           analytics.
         </p>
-        <Link
-          href="/play"
-          className="bg-pawnstorm-gold text-pawnstorm-blue font-bold text-2xl py-2 px-3 rounded-md z-30 mx-auto transition-all duration-300 hover:bg-white"
-        >
+        <ButtonLink href="/play" className="z-30 mx-auto text-2xl">
           Play Now
-        </Link>
+        </ButtonLink>
       </div>
     </section>
   );

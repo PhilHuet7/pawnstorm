@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { createBoardFromFEN, getPieceSymbol } from "@/lib/utils";
 import type { Square } from "chess.js";
+import Button from "../ui/button";
 
 const files = "abcdefgh";
 
@@ -42,8 +43,8 @@ const Chessboard = () => {
 
     // Otherwise (re)select only if it's the side to move
     if (piece && piece.color === turn) {
-      setSelected(coord);
-      setTargets(legalTargets(coord));
+      setSelected(selected !== coord ? coord : null);
+      setTargets(selected !== coord ? legalTargets(coord) : []);
     } else {
       setSelected(null);
       setTargets([]);
@@ -70,7 +71,7 @@ const Chessboard = () => {
                   ${isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"} 
                   ${
                     isSelected
-                      ? "after:absolute after:inset-0 after:bg-blue-500/40 border-4 border-blue-500"
+                      ? "after:absolute after:inset-0 after:bg-blue-500/40 border-3 border-blue-500"
                       : ""
                   } 
                   ${
@@ -96,18 +97,8 @@ const Chessboard = () => {
       </div>
 
       <div className="flex gap-2">
-        <button
-          onClick={undo}
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
-        >
-          Undo
-        </button>
-        <button
-          onClick={reset}
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
-        >
-          Reset
-        </button>
+        <Button onClick={undo}>Undo</Button>
+        <Button onClick={reset}>Reset</Button>
       </div>
     </div>
   );

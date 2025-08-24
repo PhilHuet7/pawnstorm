@@ -11,21 +11,21 @@ export const createInitialBoard = (): Board => {
       .fill(null)
       .map(() => ({
         piece: {
-          type: "pawn" as Piece["type"],
+          type: "p" as Piece["type"],
           color,
           hasMoved: false,
         },
       }));
 
   const backRankOrder: Piece["type"][] = [
-    "rook",
-    "knight",
-    "bishop",
-    "queen",
-    "king",
-    "bishop",
-    "knight",
-    "rook",
+    "r",
+    "n",
+    "b",
+    "q",
+    "k",
+    "b",
+    "n",
+    "r",
   ];
 
   const board: Board = [];
@@ -33,12 +33,12 @@ export const createInitialBoard = (): Board => {
   // Black back rank
   board.push(
     backRankOrder.map((type) => ({
-      piece: { type, color: "black", hasMoved: false },
+      piece: { type, color: "b", hasMoved: false },
     }))
   );
 
   // Black pawns
-  board.push(createPawnRow("black"));
+  board.push(createPawnRow("b"));
 
   // Empty rows
   for (let i = 0; i < 4; i++) {
@@ -46,12 +46,12 @@ export const createInitialBoard = (): Board => {
   }
 
   // White pawns
-  board.push(createPawnRow("white"));
+  board.push(createPawnRow("w"));
 
   // White back rank
   board.push(
     backRankOrder.map((type) => ({
-      piece: { type, color: "white", hasMoved: false },
+      piece: { type, color: "w", hasMoved: false },
     }))
   );
 

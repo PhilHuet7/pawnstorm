@@ -68,16 +68,24 @@ const Chessboard = () => {
                 onClick={() => onSquareClick(coord, square.piece as any)}
                 className={`relative flex items-center justify-center w-16 h-16 
                   ${isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"} 
-                  ${isSelected ? "outline-4 outline-blue-500/70" : ""} 
-                  ${isTarget ? "ring-4 ring-green-500/50" : ""} 
                   ${
-                    isLastFrom || isLastTo
+                    isSelected
+                      ? "after:absolute after:inset-0 after:bg-blue-500/40 border-4 border-blue-500"
+                      : ""
+                  } 
+                  ${
+                    isTarget
+                      ? "after:absolute after:inset-0 after:bg-green-400/70 after:animate-blinking"
+                      : ""
+                  } 
+                  ${
+                    !isTarget && (isLastFrom || isLastTo)
                       ? "after:absolute after:inset-0 after:bg-yellow-300/50"
                       : ""
                   }`}
               >
                 {square.piece && (
-                  <span className="text-5xl select-none">
+                  <span className="text-5xl select-none relative z-50">
                     {getPieceSymbol(square.piece.type, square.piece.color)}
                   </span>
                 )}

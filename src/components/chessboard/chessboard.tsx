@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { createBoardFromFEN, getPieceSymbol } from "@/lib/utils";
 import type { Square } from "chess.js";
 import { PieceType } from "@/types/chess";
 import Button from "../ui/button";
+
+type PieceVM = {
+  id: string;
+  color: "w" | "b";
+  type: string; // 'p','n','b','r','q','k'
+  square: Square;
+};
 
 const files = "abcdefgh";
 
@@ -41,7 +48,8 @@ const useBoardRect = () => {
 
   useEffect(() => {
     if (!ref.current) return;
-    const update = () => setRect(ref.current!.getBoundingClientRect());
+    const update = () =>
+      setRect(ref.current ? ref.current.getBoundingClientRect() : null);
     const ro = new ResizeObserver(update);
     ro.observe(ref.current);
     update();
@@ -50,20 +58,14 @@ const useBoardRect = () => {
   return { boardRef: ref, rect };
 };
 
-type PieceVM = {
-  id: string;
-  color: "w" | "b";
-  type: string; // 'p','n','b','r','q','k'
-  square: Square;
-};
-
 const Chessboard = () => {
   // store
+  const version = useGameStore((s) => s.positionVersion);
   const fen = useGameStore((s) => s.fen);
   const turn = useGameStore((s) => s.turn);
   const lastMove = useGameStore((s) => s.lastMove);
   const legalTargets = useGameStore((s) => s.legalTargets);
-  const isLegal = useGameStore((s) => s.isLegal);
+  // const isLegal = useGameStore((s) => s.isLegal);
   const makeMove = useGameStore((s) => s.makeMove);
   const undo = useGameStore((s) => s.undo);
   const reset = useGameStore((s) => s.reset);
@@ -83,6 +85,48 @@ const Chessboard = () => {
   // from lastMove.from -> lastMove.to so the moved piece keeps its identity.
   const idMapRef = useRef(new Map<Square, string>());
 
+  // track DOM nodes for each piece id
+  const nodeMapRef = useRef<Map<string, HTMLElement>>(new Map());
+
+  // Keep prior board layout to diff when needed
+  const prevBoardRef = useRef<ReturnType<typeof createBoardFromFEN> | null>(
+    null
+  );
+
+  // Helper to find a (from,to) by diffing prev vs current board if lastMove is missing
+  const findMoveByDiff = (
+    prev: ReturnType<typeof createBoardFromFEN>,
+    curr: ReturnType<typeof createBoardFromFEN>
+  ): { from: Square; to: Square } | null => {
+    // scan 64 squares, find one that went empty and one that became occupied (same color if possible)
+    let fromSq: Square | null = null;
+    let toSq: Square | null = null;
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const prevCell = prev[row][col];
+        const currCell = curr[row][col];
+        const sq = idxToSquare(row, col);
+
+        if (prevCell.piece && !currCell.piece) {
+          fromSq = sq;
+        } else if (!prevCell.piece && currCell.piece) {
+          toSq = sq;
+        } else if (prevCell.piece && currCell.piece) {
+          // promotions / captures: piece remains but type/color may change;
+          // if type changed or color changed, treat as toSq
+          if (
+            prevCell.piece.type !== currCell.piece.type ||
+            prevCell.piece.color !== currCell.piece.color
+          ) {
+            toSq = sq;
+          }
+        }
+      }
+    }
+    return fromSq && toSq ? { from: fromSq, to: toSq } : null;
+  };
+
   const pieces: PieceVM[] = useMemo(() => {
     const next = new Map<Square, string>();
     const list: PieceVM[] = [];
@@ -92,8 +136,16 @@ const Chessboard = () => {
       idMapRef.current.get(sq) ?? `${sq}-${crypto.randomUUID()}`;
 
     // If we know a last move, transfer ID from from->to for the mover
-    const movedFrom = lastMove?.from ?? null;
-    const movedTo = lastMove?.to ?? null;
+    let movedFrom = lastMove?.from ?? null;
+    let movedTo = lastMove?.to ?? null;
+
+    if ((!movedFrom || !movedTo) && prevBoardRef.current) {
+      const guessed = findMoveByDiff(prevBoardRef.current, board);
+      if (guessed) {
+        movedFrom = guessed.from;
+        movedTo = guessed.to;
+      }
+    }
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
@@ -121,8 +173,52 @@ const Chessboard = () => {
     }
 
     idMapRef.current = next;
+    // remember current board for next diff
+    prevBoardRef.current = board;
     return list;
-  }, [board, lastMove]);
+  }, [board, lastMove, version]);
+
+  const moverIdThisFrame = useMemo(() => {
+    if (!lastMove) return null;
+    // idMapRef.current has just been updated inside the pieces useMemo
+    return idMapRef.current.get(lastMove.to) ?? null;
+  }, [lastMove, version, pieces]);
+
+  // --- FLIP animation for the mover (runs exactly once per move) ---
+  useLayoutEffect(() => {
+    // NEW
+    if (!lastMove || !rect || !moverIdThisFrame) return;
+
+    const el = nodeMapRef.current.get(moverIdThisFrame);
+    if (!el) return;
+
+    // Compute FROM and TO coords
+    const fromXY = squareToXY(lastMove.from, rect);
+    const toXY = squareToXY(lastMove.to, rect);
+
+    // 1) Put the mover at its OLD position with no transition
+    el.style.willChange = "";
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${fromXY.x}px, ${fromXY.y}px, 0)`;
+
+    // Force layout so the browser acknowledges the old transform
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    el.getBoundingClientRect();
+
+    // 2) In next frame, transition to the NEW position
+    requestAnimationFrame(() => {
+      el.style.willChange = "transform";
+      el.style.transition = "transform 180ms ease-in-out";
+      el.style.transform = `translate3d(${toXY.x}px, ${toXY.y}px, 0)`;
+      const onEnd = (e: TransitionEvent) => {
+        if (e.propertyName !== "transform") return;
+        el.style.transition = "";
+        el.style.willChange = "";
+        el.removeEventListener("transitionend", onEnd);
+      };
+      el.addEventListener("transitionend", onEnd);
+    });
+  }, [version, rect, moverIdThisFrame, lastMove]);
 
   // click logic (works for both background squares and piece clicks)
   const onSquareClick = (coord: Square) => {
@@ -176,11 +272,11 @@ const Chessboard = () => {
                   isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"
                 } ${
                   isSelected
-                    ? "after:absolute after:inset-0 after:bg-blue-500/40 border-3 border-blue-500"
+                    ? "after:absolute after:w-14 after:h-14 after:top-[calc(50%-1.75rem)] after:left-[calc(50%-1.75rem)] after:rounded-full after:bg-green-600/20 border-3 border-green-600"
                     : ""
                 } ${
                   isTarget
-                    ? "after:absolute after:inset-0 after:bg-green-400/70 after:animate-blinking"
+                    ? "after:absolute after:w-6 after:h-6 after:rounded-full after:top-[calc(50%-.75rem)] after:left-[calc(50%-.75rem)] after:bg-green-600/70 after:animate-blinking"
                     : ""
                 } ${
                   !isTarget && (isLastFrom || isLastTo)
@@ -200,6 +296,11 @@ const Chessboard = () => {
               return (
                 <span
                   key={p.id}
+                  ref={(el) => {
+                    const map = nodeMapRef.current;
+                    if (el) map.set(p.id, el);
+                    else map.delete(p.id);
+                  }}
                   className="absolute pointer-events-auto select-none text-5xl z-40"
                   style={{
                     transform: `translate3d(${x}px, ${y}px, 0)`,
@@ -207,7 +308,6 @@ const Chessboard = () => {
                     height: `${cell}px`,
                     lineHeight: `${cell}px`,
                     textAlign: "center",
-                    transition: "transform 180ms ease-in-out",
                   }}
                   onClick={(e) => {
                     e.stopPropagation();

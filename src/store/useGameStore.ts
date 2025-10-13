@@ -15,6 +15,7 @@ type GameState = {
   lastMove: { from: Square; to: Square } | null;
   moveHistory: string[];
   sanHistory: string[];
+  positionVersion: number;
 
   // UI/flow control
   readOnly: boolean;
@@ -86,6 +87,8 @@ export const useGameStore = create<GameState>((set, get) => {
     moveHistory: [s.fen],
     sanHistory: [],
 
+    positionVersion: 0,
+
     // flow control: disable inputs when it's engine/ opponent turn
     readOnly: false,
     setReadOnly: (v) => set({ readOnly: v }),
@@ -102,6 +105,7 @@ export const useGameStore = create<GameState>((set, get) => {
         lastMove: { from, to },
         moveHistory: [...state.moveHistory, ns.fen],
         sanHistory: [...state.sanHistory, result.san],
+        positionVersion: state.positionVersion + 1,
       }));
       return { ok: true, san: result.san, fen: ns.fen };
     },
@@ -122,13 +126,20 @@ export const useGameStore = create<GameState>((set, get) => {
         lastMove: null,
         moveHistory: [...state.moveHistory, ns.fen],
         sanHistory: state.sanHistory.slice(0, -1),
+        positionVersion: state.positionVersion + 1,
       }));
     },
 
     reset: () => {
       chess.reset();
       const ns = snapshot();
-      set({ ...ns, lastMove: null, moveHistory: [ns.fen], sanHistory: [] });
+      set((state) => ({
+        ...ns,
+        lastMove: null,
+        moveHistory: [ns.fen],
+        sanHistory: [],
+        positionVersion: state.positionVersion + 1,
+      }));
     },
 
     loadFEN: (fen) => {
@@ -138,7 +149,13 @@ export const useGameStore = create<GameState>((set, get) => {
         return false;
       }
       const ns = snapshot();
-      set({ ...ns, lastMove: null, moveHistory: [ns.fen], sanHistory: [] });
+      set((state) => ({
+        ...ns,
+        lastMove: null,
+        moveHistory: [ns.fen],
+        sanHistory: [],
+        positionVersion: state.positionVersion + 1,
+      }));
       return true;
     },
 
@@ -149,12 +166,13 @@ export const useGameStore = create<GameState>((set, get) => {
         return false;
       }
       const ns = snapshot();
-      set({
+      set((state) => ({
         ...ns,
         lastMove: null,
         moveHistory: [ns.fen],
         sanHistory: chess.history(),
-      });
+        positionVersion: state.positionVersion + 1,
+      }));
       return true;
     },
   };

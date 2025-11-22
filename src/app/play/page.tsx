@@ -46,7 +46,7 @@ const gameModes: GameModeObj[] = [
 
 const Play = () => {
   return (
-    <section className="bg-pawnstorm-blue min-h-[calc(100svh-5rem)] px-8 py-16">
+    <section className="bg-pawnstorm-blue px-8 py-16 min-h-screen">
       <div className="flex flex-row gap-8 justify-center flex-wrap animate-fadeIn">
         {gameModes.map((mode) => (
           <LinkWrapper

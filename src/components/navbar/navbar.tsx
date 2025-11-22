@@ -4,27 +4,12 @@ import Link from "next/link";
 
 const Navbar = () => {
   return (
-    <nav className="h-20 bg-pawnstorm-gold flex items-center justify-between px-6 sticky top-0 left-0 w-full z-50">
-      <Link href="/">
-        <Image
-          src="/images/PawnstormDarkBlueLogo.png"
-          alt="Dark Blue Pawnstorm Logo"
-          width={606}
-          height={435}
-          className="h-16 w-auto"
-        />
-      </Link>
-      <div className="flex gap-8">
-        <Navlink href="/">About</Navlink>
-        <Navlink href="/play">Play</Navlink>
-        <Navlink href="/">Account</Navlink>
-        <Navlink href="/">Donate</Navlink>
-      </div>
+    <nav className="h-screen bg-pawnstorm-gold flex flex-col items-center justify-start gap-10 px-4 py-6 fixed top-0 left-0 w-40 z-50">
       <Link
         href="/"
-        className="w-24 h-content text-pawnstorm-blue mt-4 mb-auto transition-all duration-300 hover:cursor-pointer hover:text-white"
+        className="text-pawnstorm-blue transition-all duration-300 hover:cursor-pointer hover:text-white"
       >
-        <div className="ml-auto flex gap-1 items-center">
+        <div className="flex gap-1 items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -37,9 +22,24 @@ const Navbar = () => {
               clipRule="evenodd"
             />
           </svg>
-          <p className="w-content">Sign In</p>
+          <p className="w-content font-semibold">Sign In</p>
         </div>
       </Link>
+      <Link href="/">
+        <Image
+          src="/images/PawnstormDarkBlueLogo.png"
+          alt="Dark Blue Pawnstorm Logo"
+          width={606}
+          height={435}
+          className="h-auto w-full"
+        />
+      </Link>
+      <div className="flex flex-col gap-6">
+        <Navlink href="/">About</Navlink>
+        <Navlink href="/play">Play</Navlink>
+        <Navlink href="/">Account</Navlink>
+        <Navlink href="/">Donate</Navlink>
+      </div>
     </nav>
   );
 };

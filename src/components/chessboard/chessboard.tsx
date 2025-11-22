@@ -31,14 +31,12 @@ const parseSquare = (sq: Square) => ({
 // Map a square to pixel coordinates inside the board rect
 const squareToXY = (sq: Square, rect: DOMRect) => {
   const { fileIdx, rankIdxFromTop } = parseSquare(sq);
-  const size = Math.min(rect.width, rect.height);
-  const cell = size / 8;
-  const offsetX = (rect.width - size) / 2;
-  const offsetY = (rect.height - size) / 2;
+  const cellX = rect.width / 8;
+  const cellY = rect.height / 8;
   return {
-    x: Math.round(offsetX + fileIdx * cell),
-    y: Math.round(offsetY + rankIdxFromTop * cell),
-    cell,
+    x: fileIdx * cellX,
+    y: rankIdxFromTop * cellY,
+    cell: Math.min(cellX, cellY),
   };
 };
 
@@ -246,14 +244,21 @@ const Chessboard = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Board container defines the coordinate space */}
+    <div className="flex flex-col items-center justify-center">
       <div
-        ref={boardRef}
-        className="relative w-128 h-128 border border-gray-700 overflow-hidden"
-      >
+        className={`h-2 w-[calc(100%-2px)] mx-auto rounded-t-lg shrink-0 ${
+          turn === "b"
+            ? "bg-gradient-to-t from-pawnstorm-gold to-pawnstorm-gold/50 animate-pulse"
+            : "bg-transparent"
+        }`}
+      />
+      {/* Board container defines the coordinate space */}
+      <div className="relative w-128 aspect-square shrink-0 ring ring-gray-700 overflow-hidden">
         {/* Squares background (click targets) */}
-        <div className="absolute inset-0 grid grid-cols-8 grid-rows-8">
+        <div
+          ref={boardRef}
+          className="absolute inset-0 grid grid-cols-8 grid-rows-8"
+        >
           {Array.from({ length: 64 }).map((_, i) => {
             const rowIndex = Math.floor(i / 8);
             const colIndex = i % 8;
@@ -272,7 +277,7 @@ const Chessboard = () => {
                   isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"
                 } ${
                   isSelected
-                    ? "after:absolute after:w-14 after:h-14 after:top-[calc(50%-1.75rem)] after:left-[calc(50%-1.75rem)] after:rounded-full after:bg-green-600/20 border-3 border-green-600"
+                    ? "after:absolute after:w-14 after:h-14 after:top-[calc(50%-1.75rem)] after:left-[calc(50%-1.75rem)] after:rounded-full after:bg-green-600/20 "
                     : ""
                 } ${
                   isTarget
@@ -321,6 +326,13 @@ const Chessboard = () => {
           </div>
         )}
       </div>
+      <div
+        className={`h-2 w-[calc(100%-2px)] mx-auto rounded-b-lg shrink-0 ${
+          turn === "w"
+            ? "bg-gradient-to-b from-pawnstorm-gold to-pawnstorm-gold/50 animate-pulse"
+            : "bg-transparent"
+        }`}
+      />
       <div className="flex gap-2 mt-3">
         <Button onClick={undo}>Undo</Button>
         <Button onClick={reset}>Reset</Button>

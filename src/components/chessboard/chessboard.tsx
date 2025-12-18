@@ -329,7 +329,7 @@ const Chessboard = () => {
       <div
         className={`h-2 w-[calc(100%-2px)] mx-auto rounded-b-lg shrink-0 ${
           turn === "w"
-            ? "bg-gradient-to-b from-pawnstorm-gold to-pawnstorm-gold/50 animate-pulse"
+            ? "bg-gradient-to-b from-white to-white/50 animate-pulse"
             : "bg-transparent"
         }`}
       />

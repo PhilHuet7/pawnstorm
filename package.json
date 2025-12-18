@@ -7,13 +7,15 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "fix:react2shell": "fix-react2shell-next"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
     "chess.js": "^1.4.0",
     "clsx": "^2.1.1",
-    "next": "15.3.1",
+    "fix-react2shell-next": "^1.1.4",
+    "next": "15.3.8",
     "postcss": "^8.5.3",
     "rdndmb-html5-to-touch": "^9.0.0",
     "react": "^19.0.0",

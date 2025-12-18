@@ -3,7 +3,7 @@ import ButtonLink from "../ui/buttonLink";
 
 export default function Hero() {
   return (
-    <section className="relative flex h-screen z-0">
+    <section className="ml-40 relative flex h-screen z-0">
       <video
         src="/images/PawnstormHeroVideoCompressed.mp4"
         autoPlay

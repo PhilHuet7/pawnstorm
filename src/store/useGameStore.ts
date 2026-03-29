@@ -1,8 +1,14 @@
 import { create } from "zustand";
-import { Chess, Square } from "chess.js";
+import { Chess, PieceSymbol, Square } from "chess.js";
 
 type MoveResult =
-  | { ok: true; san: string; fen: string }
+  | {
+      ok: true;
+      san: string;
+      fen: string;
+      captured?: PieceSymbol;
+      enPassant: boolean;
+    }
   | { ok: false; reason: "illegal" | "readOnly" };
 
 type DrawReason = "threefold" | "fiftyMove" | "insufficient" | "stalemate";
@@ -17,6 +23,9 @@ type GameState = {
   sanHistory: string[];
   positionVersion: number;
 
+  // captured pieces (pieces each side has taken)
+  capturedPieces: { w: PieceSymbol[]; b: PieceSymbol[] };
+
   // UI/flow control
   readOnly: boolean;
   setReadOnly: (v: boolean) => void;
@@ -25,7 +34,7 @@ type GameState = {
   makeMove: (
     from: Square,
     to: Square,
-    promotion?: "q" | "r" | "b" | "n"
+    promotion?: "q" | "r" | "b" | "n",
   ) => MoveResult;
   legalTargets: (from: Square) => Square[];
   isLegal: (from: Square, to: Square) => boolean;
@@ -53,10 +62,10 @@ export const useGameStore = create<GameState>((set, get) => {
       ? chess.isStalemate()
         ? "stalemate"
         : chess.isThreefoldRepetition()
-        ? "threefold"
-        : chess.isInsufficientMaterial()
-        ? "insufficient"
-        : "fiftyMove"
+          ? "threefold"
+          : chess.isInsufficientMaterial()
+            ? "insufficient"
+            : "fiftyMove"
       : undefined;
 
     return {
@@ -88,6 +97,7 @@ export const useGameStore = create<GameState>((set, get) => {
     sanHistory: [],
 
     positionVersion: 0,
+    capturedPieces: { w: [], b: [] },
 
     // flow control: disable inputs when it's engine/ opponent turn
     readOnly: false,
@@ -106,8 +116,23 @@ export const useGameStore = create<GameState>((set, get) => {
         moveHistory: [...state.moveHistory, ns.fen],
         sanHistory: [...state.sanHistory, result.san],
         positionVersion: state.positionVersion + 1,
+        ...(result.captured && {
+          capturedPieces: {
+            ...state.capturedPieces,
+            [result.color]: [
+              ...state.capturedPieces[result.color],
+              result.captured,
+            ],
+          },
+        }),
       }));
-      return { ok: true, san: result.san, fen: ns.fen };
+      return {
+        ok: true,
+        san: result.san,
+        fen: ns.fen,
+        captured: result.captured,
+        enPassant: result.isEnPassant(),
+      };
     },
 
     // helpers for DnD highlighting + gating
@@ -127,6 +152,12 @@ export const useGameStore = create<GameState>((set, get) => {
         moveHistory: [...state.moveHistory, ns.fen],
         sanHistory: state.sanHistory.slice(0, -1),
         positionVersion: state.positionVersion + 1,
+        ...(undone.captured && {
+          capturedPieces: {
+            ...state.capturedPieces,
+            [undone.color]: state.capturedPieces[undone.color].slice(0, -1),
+          },
+        }),
       }));
     },
 
@@ -139,6 +170,7 @@ export const useGameStore = create<GameState>((set, get) => {
         moveHistory: [ns.fen],
         sanHistory: [],
         positionVersion: state.positionVersion + 1,
+        capturedPieces: { w: [], b: [] },
       }));
     },
 
@@ -155,6 +187,7 @@ export const useGameStore = create<GameState>((set, get) => {
         moveHistory: [ns.fen],
         sanHistory: [],
         positionVersion: state.positionVersion + 1,
+        capturedPieces: { w: [], b: [] },
       }));
       return true;
     },
@@ -172,6 +205,7 @@ export const useGameStore = create<GameState>((set, get) => {
         moveHistory: [ns.fen],
         sanHistory: chess.history(),
         positionVersion: state.positionVersion + 1,
+        capturedPieces: { w: [], b: [] },
       }));
       return true;
     },

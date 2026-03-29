@@ -16,6 +16,8 @@
   --color-foreground: var(--foreground);
   --animate-fadeIn: fadeIn 0.5s ease-in forwards;
   --animate-blinking: blinking 1.1s infinite;
+  --animate-notificationIn: notificationIn 300ms ease-out forwards;
+  --animate-notificationShrink: notificationShrink linear forwards;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -58,5 +60,25 @@ body {
   }
   to {
     opacity: 0.5;
+  }
+}
+
+@keyframes notificationIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes notificationShrink {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0%;
   }
 }

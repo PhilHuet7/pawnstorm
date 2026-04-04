@@ -88,13 +88,13 @@ const Chessboard = () => {
 
   // Keep prior board layout to diff when needed
   const prevBoardRef = useRef<ReturnType<typeof createBoardFromFEN> | null>(
-    null
+    null,
   );
 
   // Helper to find a (from,to) by diffing prev vs current board if lastMove is missing
   const findMoveByDiff = (
     prev: ReturnType<typeof createBoardFromFEN>,
-    curr: ReturnType<typeof createBoardFromFEN>
+    curr: ReturnType<typeof createBoardFromFEN>,
   ): { from: Square; to: Square } | null => {
     // scan 64 squares, find one that went empty and one that became occupied (same color if possible)
     let fromSq: Square | null = null;
@@ -245,13 +245,13 @@ const Chessboard = () => {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div
+      {/* <div
         className={`h-2 w-[calc(100%-2px)] mx-auto rounded-t-lg shrink-0 ${
           turn === "b"
             ? "bg-gradient-to-t from-pawnstorm-gold to-pawnstorm-gold/50 animate-pulse"
             : "bg-transparent"
         }`}
-      />
+      /> */}
       {/* Board container defines the coordinate space */}
       <div className="relative w-128 aspect-square shrink-0 ring ring-gray-700 overflow-hidden">
         {/* Squares background (click targets) */}
@@ -326,17 +326,13 @@ const Chessboard = () => {
           </div>
         )}
       </div>
-      <div
+      {/* <div
         className={`h-2 w-[calc(100%-2px)] mx-auto rounded-b-lg shrink-0 ${
           turn === "w"
             ? "bg-gradient-to-b from-white to-white/50 animate-pulse"
             : "bg-transparent"
         }`}
-      />
-      <div className="flex gap-2 mt-3">
-        <Button onClick={undo}>Undo</Button>
-        <Button onClick={reset}>Reset</Button>
-      </div>
+      /> */}
     </div>
   );
 };

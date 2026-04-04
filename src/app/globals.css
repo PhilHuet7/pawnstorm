@@ -18,6 +18,7 @@
   --animate-blinking: blinking 1.1s infinite;
   --animate-notificationIn: notificationIn 300ms ease-out forwards;
   --animate-notificationShrink: notificationShrink linear forwards;
+  --animate-capturedPieceIn: capturedPieceIn 200ms ease-out forwards;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -80,5 +81,16 @@ body {
   }
   100% {
     width: 0%;
+  }
+}
+
+@keyframes capturedPieceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }

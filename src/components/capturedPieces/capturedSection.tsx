@@ -28,11 +28,11 @@ const CapturedSection = ({ pieces, color, player }: CapturedSectionProps) => {
   const groups = groupByType(pieces);
   return (
     <div
-      className={`relative z-10 flex flex-col gap-0.5 w-full h-full py-4 ${color === "w" ? "bg-black text-white" : "bg-white text-black"}`}
+      className={`relative z-10 flex flex-col gap-0.5 w-full h-full max-h-1/2 py-4 ${color === "b" ? "bg-black text-white" : "bg-white text-black"}`}
     >
       <div className={`flex flex-col gap-2`}>
         <div className="flex flex-row items-center px-3 py-1">
-          {turn !== color && (
+          {turn === color && (
             <div
               className={`rounded-full w-4 h-4 bg-green-600 animate-blinking`}
             />

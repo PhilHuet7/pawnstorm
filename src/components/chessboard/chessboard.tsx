@@ -5,7 +5,6 @@ import { useGameStore } from "@/store/useGameStore";
 import { createBoardFromFEN, getPieceSymbol } from "@/lib/utils";
 import type { Square } from "chess.js";
 import { PieceType } from "@/types/chess";
-import Button from "../ui/button";
 
 type PieceVM = {
   id: string;
@@ -65,8 +64,6 @@ const Chessboard = () => {
   const legalTargets = useGameStore((s) => s.legalTargets);
   // const isLegal = useGameStore((s) => s.isLegal);
   const makeMove = useGameStore((s) => s.makeMove);
-  const undo = useGameStore((s) => s.undo);
-  const reset = useGameStore((s) => s.reset);
 
   // derived board matrix
   const board = useMemo(() => createBoardFromFEN(fen), [fen]);

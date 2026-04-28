@@ -25,7 +25,7 @@ export const useGameNotifications = () => {
     } else if (stalemate) {
       push("stalemate", "Stalemate — Draw", 999999);
     } else if (inCheck) {
-      push("check", "Check!", 999999);
+      push("check", "Check!", 5000);
     }
   }, [version, inCheck, checkmate, stalemate, turn, push]);
 };

@@ -12,8 +12,8 @@ export default function ChessboardWrapper() {
   return (
     <div className="flex flex-col">
       <div className="flex flex-row gap-4">
-        <CapturedPieces />
         <Chessboard />
+        <CapturedPieces />
       </div>
       <UndoResetButtons undo={undo} reset={reset} className="mx-auto" />
     </div>

@@ -1,5 +1,3 @@
-import CapturedPieces from "@/components/capturedPieces/capturedPieces";
-import Chessboard from "@/components/chessboard/chessboard";
 import ChessboardWrapper from "@/components/chessboard/chessboardWrapper";
 import GameNotifications from "@/components/notifications/gameNotifications";
 

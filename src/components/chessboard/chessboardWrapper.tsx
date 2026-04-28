@@ -3,7 +3,7 @@
 import { useGameStore } from "@/store/useGameStore";
 import Chessboard from "./chessboard";
 import UndoResetButtons from "./undoResetButtons";
-import CapturedPieces from "../capturedPieces/capturedPieces";
+import GameSidebar from "../sidebar/GameSidebar";
 
 export default function ChessboardWrapper() {
   const undo = useGameStore((s) => s.undo);
@@ -11,9 +11,9 @@ export default function ChessboardWrapper() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-row gap-4">
+      <div className="flex flex-row flex-wrap items-stretch gap-4">
         <Chessboard />
-        <CapturedPieces />
+        <GameSidebar />
       </div>
       <UndoResetButtons undo={undo} reset={reset} className="mx-auto" />
     </div>

@@ -6,18 +6,17 @@ import { useNotificationStore } from "@/store/useNotificationStore";
 
 export const useGameNotifications = () => {
   const version = useGameStore((s) => s.positionVersion);
-  const inCheck = useGameStore((s) => s.inCheck);
-  const checkmate = useGameStore((s) => s.checkmate);
-  const stalemate = useGameStore((s) => s.stalemate);
-  const turn = useGameStore((s) => s.turn);
   const push = useNotificationStore((s) => s.push);
 
   const prevVersion = useRef(version);
 
   useEffect(() => {
-    console.log("version", version, "checkmate", checkmate, "inCheck", inCheck);
     if (version === prevVersion.current) return;
     prevVersion.current = version;
+
+    // Read directly from the store so we always get the committed snapshot,
+    // not a potentially-stale closure value from a separate subscription.
+    const { inCheck, checkmate, stalemate, turn } = useGameStore.getState();
 
     if (checkmate) {
       const winner = turn === "w" ? "Black" : "White";
@@ -27,5 +26,5 @@ export const useGameNotifications = () => {
     } else if (inCheck) {
       push("check", "Check!", 5000);
     }
-  }, [version, inCheck, checkmate, stalemate, turn, push]);
+  }, [version, push]);
 };

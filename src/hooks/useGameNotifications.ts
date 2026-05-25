@@ -14,9 +14,8 @@ export const useGameNotifications = () => {
     if (version === prevVersion.current) return;
     prevVersion.current = version;
 
-    // Read directly from the store so we always get the committed snapshot,
-    // not a potentially-stale closure value from a separate subscription.
-    const { inCheck, checkmate, stalemate, turn } = useGameStore.getState();
+    const state = useGameStore.getState();
+    const { inCheck, checkmate, stalemate, turn } = state;
 
     if (checkmate) {
       const winner = turn === "w" ? "Black" : "White";

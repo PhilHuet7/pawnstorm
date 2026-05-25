@@ -10,12 +10,12 @@ export default function ChessboardWrapper() {
   const reset = useGameStore((s) => s.reset);
 
   return (
-    <div className="flex flex-col">
-      <div className="flex flex-row flex-wrap items-stretch gap-4">
+    <div className="flex flex-row flex-wrap items-stretch gap-4">
+      <div className="flex flex-col">
         <Chessboard />
-        <GameSidebar />
+        <UndoResetButtons undo={undo} reset={reset} className="mx-auto" />
       </div>
-      <UndoResetButtons undo={undo} reset={reset} className="mx-auto" />
+      <GameSidebar />
     </div>
   );
 }

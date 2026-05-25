@@ -2,6 +2,7 @@
 
 import { useGameNotifications } from "@/hooks/useGameNotifications";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { useEffect, useRef } from "react";
 
 const typeStyles: Record<string, string> = {
   check: "border-pawnstorm-gold text-pawnstorm-gold text-5xl px-8 py-4",
@@ -15,15 +16,33 @@ const GameNotifications = () => {
   const notification = useNotificationStore((s) => s.notification);
   const clearNotification = useNotificationStore((s) => s.clearNotification);
 
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!notification) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target as Node)
+      )
+        clearNotification();
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notification, clearNotification]);
+
   if (!notification) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center ml-36 justify-center pointer-events-none">
+    <div className={`absolute inset-0 z-50 flex items-center justify-center`}>
       <div
-        onClick={clearNotification}
-        className={`pointer-events-auto cursor-pointer relative overflow-hidden
+        ref={notificationRef}
+        onClick={(e) => e.stopPropagation()}
+        className={`cursor-default relative overflow-hidden
           bg-pawnstorm-blue/95 border-2 rounded-lg font-bold tracking-wider
-          shadow-lg backdrop-blur-sm
+          shadow-lg
           animate-notificationIn
           ${typeStyles[notification.type]}`}
       >

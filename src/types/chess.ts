@@ -1,3 +1,5 @@
+import { Square } from "chess.js";
+
 export type PieceType = "p" | "r" | "n" | "b" | "q" | "k";
 
 export type PieceColor = "w" | "b";
@@ -8,16 +10,17 @@ export type Piece = {
   hasMoved?: boolean;
 };
 
-export type Square = {
+export type PieceVM = {
+  id: string;
+  color: "w" | "b";
+  type: string; // 'p','n','b','r','q','k'
+  square: Square;
+};
+
+export type BoardSquare = {
   piece: Piece | null;
 };
 
-export type Board = Square[][];
-
-export type DragItem = {
-  from: { row: number; col: number };
-  piece: PieceType;
-  type: "piece";
-};
+export type Board = BoardSquare[][];
 
 export type Coord = { row: number; col: number };

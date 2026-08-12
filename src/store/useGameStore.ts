@@ -146,10 +146,13 @@ export const useGameStore = create<GameState>((set, get) => {
       const undone = chess.undo();
       if (!undone) return;
       const ns = snapshot();
+      // Re-point the highlight at whatever move is now the most recent, so
+      // stepping backwards still shows where the board last came from.
+      const prev = chess.history({ verbose: true }).at(-1);
       set((state) => ({
         ...ns,
-        lastMove: null,
-        moveHistory: [...state.moveHistory, ns.fen],
+        lastMove: prev ? { from: prev.from, to: prev.to } : null,
+        moveHistory: state.moveHistory.slice(0, -1),
         sanHistory: state.sanHistory.slice(0, -1),
         positionVersion: state.positionVersion + 1,
         ...(undone.captured && {

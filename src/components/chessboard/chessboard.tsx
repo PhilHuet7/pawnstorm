@@ -317,7 +317,7 @@ const Chessboard = () => {
   };
 
   // ── drag sensors ──────────────────────────────────────────────────────────
-  // Require 8px of movement before activating a drag so that plain clicks
+  // Require 4px of movement before activating a drag so that plain clicks
   // fall through to onClick handlers and don't fire drag start/end.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

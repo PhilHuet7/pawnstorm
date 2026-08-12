@@ -36,11 +36,13 @@ const GameNotifications = () => {
   if (!notification) return null;
 
   return (
-    <div className={`absolute inset-0 z-50 flex items-center justify-center`}>
+    // pointer-events-none so the board stays clickable underneath while a
+    // notification is up; only the card itself takes pointer events.
+    <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
       <div
         ref={notificationRef}
         onClick={(e) => e.stopPropagation()}
-        className={`cursor-default relative overflow-hidden
+        className={`pointer-events-auto cursor-default relative overflow-hidden
           bg-pawnstorm-blue/95 border-2 rounded-lg font-bold tracking-wider
           shadow-lg
           animate-notificationIn

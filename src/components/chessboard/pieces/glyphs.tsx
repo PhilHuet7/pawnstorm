@@ -2,7 +2,7 @@
  * Chess piece geometry from the lichess "mono" piece set.
  * Copyright (C) the Lichess authors — https://github.com/lichess-org/lila
  * Licensed under the GNU General Public License, version 2 or later (GPLv2+).
- * Full text: ../../../../LICENSE-GPL-2.0.txt   Attribution: ../../../../NOTICE.md
+ * Full text: ./LICENSE-GPL-2.0.txt   Attribution: ./NOTICE.md
  *
  * MODIFICATIONS (per GPL section 2): the original single-color paths were
  * extracted and their fill/stroke split so `PieceIcon` renders them in two
@@ -10,11 +10,11 @@
  * read on both square shades. The path data itself is unchanged.
  */
 import type { ReactNode } from "react";
-import type { PieceType } from "./types";
+import type { PieceName } from "@/types/chess";
 
 export type Glyph = { inner: ReactNode; fillRule: "evenodd" | "nonzero" };
 
-export const PIECE_GLYPHS: Record<PieceType, Glyph> = {
+export const PIECE_GLYPHS: Record<PieceName, Glyph> = {
   king: {
     fillRule: "evenodd",
     inner: (

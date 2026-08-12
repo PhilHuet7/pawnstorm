@@ -2,7 +2,7 @@
  * Chess piece geometry from the lichess "mono" piece set.
  * Copyright (C) the Lichess authors — https://github.com/lichess-org/lila
  * Licensed under the GNU General Public License, version 2 or later (GPLv2+).
- * Full text: ../../../../LICENSE-GPL-2.0.txt   Attribution: ../../../../NOTICE.md
+ * Full text: ./LICENSE-GPL-2.0.txt   Attribution: ./NOTICE.md
  *
  * MODIFICATIONS (per GPL section 2): the original single-color paths were
  * extracted and their fill/stroke split so `PieceIcon` renders them in two
@@ -11,9 +11,16 @@
  */
 import type { CSSProperties } from "react";
 import { PIECE_GLYPHS } from "./glyphs";
-import { CODE_TO_TYPE, type PieceCode, type PieceColor, type PieceType } from "./types";
+import {
+  CODE_TO_NAME,
+  COLOR_TO_SHADE,
+  type PieceColor,
+  type PieceName,
+  type PieceShade,
+  type PieceType,
+} from "@/types/chess";
 
-const PALETTE: Record<PieceColor, { fill: string; outline: string }> = {
+const PALETTE: Record<PieceShade, { fill: string; outline: string }> = {
   white: { fill: "#f7f7f4", outline: "#3a3a3a" },
   black: { fill: "#2b2b2b", outline: "#eaeae4" },
 };
@@ -22,8 +29,10 @@ const NATIVE_SW = 1.5;   // mono's own stroke width
 const OUTLINE_HALO = 1.9; // extra width each side for the contrasting outline
 
 export interface PieceIconProps {
-  type: PieceType | PieceCode;
-  color?: PieceColor | "w" | "b";
+  /** Long name ("knight") or chess.js code ("n"). */
+  type: PieceName | PieceType;
+  /** Long name ("black") or chess.js code ("b"). Omit to inherit CSS `color`. */
+  color?: PieceShade | PieceColor;
   size?: number;
   outline?: boolean;      // contrasting halo; default true
   fill?: string;
@@ -36,20 +45,22 @@ export interface PieceIconProps {
 export function PieceIcon({
   type, color, size, outline = true, fill, outlineColor, className, style, title,
 }: PieceIconProps) {
-  const t: PieceType =
-    type.length === 1 ? CODE_TO_TYPE[type as PieceCode] : (type as PieceType);
-  const c: PieceColor | undefined = color
-    ? color === "w" ? "white" : color === "b" ? "black" : (color as PieceColor)
+  const name: PieceName =
+    type.length === 1 ? CODE_TO_NAME[type as PieceType] : (type as PieceName);
+  const shade: PieceShade | undefined = color
+    ? color.length === 1
+      ? COLOR_TO_SHADE[color as PieceColor]
+      : (color as PieceShade)
     : undefined;
-  const bodyFill = fill ?? (c ? PALETTE[c].fill : "currentColor");
-  const strokeCol = outlineColor ?? (c ? PALETTE[c].outline : "#3a3a3a");
-  const g = PIECE_GLYPHS[t];
+  const bodyFill = fill ?? (shade ? PALETTE[shade].fill : "currentColor");
+  const strokeCol = outlineColor ?? (shade ? PALETTE[shade].outline : "#3a3a3a");
+  const g = PIECE_GLYPHS[name];
   const dims = size != null ? { width: size, height: size } : { width: "100%", height: "100%" };
 
   return (
     <svg
       viewBox="0 0 45 45" role="img"
-      aria-label={title ?? `${c ?? ""} ${t}`.trim()}
+      aria-label={title ?? `${shade ?? ""} ${name}`.trim()}
       width={dims.width} height={dims.height} className={className}
       style={{ color: bodyFill, ["--po" as string]: strokeCol, display: "block", ...style }}
     >

@@ -1,11 +1,18 @@
 # Pawnstorm — UI completion plan
 
-> **Status — planned, not started.** Written 2026-07-31; no code has been changed against it yet.
+> **Status — ready to execute.** All assets are in the repo (commit `bff686d`) and every open
+> decision is resolved. Nothing is blocked on external input.
 >
 > **How to work through this:** in small, individually reviewable steps. Phil wants to read every
-> line as it lands so he holds the context himself — so take one checklist item (or one tightly
+> line as it lands so he holds the context himself — take one checklist item (or one tightly
 > related group) at a time, explain the change, and stop for review before moving on. Do not
 > batch a whole phase into a single sweep.
+>
+> **Progress:** step 0 (relocation + type consolidation) and Phase 0 are ✅ done — except the
+> two items explicitly deferred to Phase 4 (draw notifications, the `duration: 999999` hack).
+> Phase 1 (`lastMoveEvent`) is next.
+>
+> A copy of this document lives at `docs/UI_PLAN.md`; re-copy it whenever this file changes.
 
 ## Context
 
@@ -21,21 +28,29 @@ and Stockfish integration will otherwise force a rework of later.
 Three decisions already made:
 - Per-move events (capture / castle / en passant / promotion) surface as a **subtle non-blocking
   corner ticker + sound**. The big center overlay is reserved for check / checkmate / draw.
-- Pieces move from Unicode glyphs to a **hand-authored flat SVG set** (no license questions,
-  swappable later).
+- Pieces move from Unicode glyphs to the **lichess "mono" silhouette set** (GPLv2+), rendered
+  through a single `PieceIcon` with a contrasting outline halo.
 - Scope is **foundations + polish**, stopping short of settings panels / themes / clocks.
+
+Resolved during asset delivery:
+- **Checkmate audio is a two-part sequence** — `checkmate.mp3` (lightning crack) on the mating
+  move, with `gameEnd.mp3` (rolling thunder) queued behind it. The sound layer therefore needs a
+  small follow-up mechanism, not just fire-and-forget.
+- **`illegal.mp3` fires only on a drag released over a non-legal square.** Clicking a non-target
+  square while a piece is selected stays silent — that is ordinary deselection, and beeping at it
+  would get irritating.
 
 ---
 
 ## Phase 0 — Bugs to fix first
 
-- [ ] **`undo()` corrupts `moveHistory`** — [useGameStore.ts:152](src/store/useGameStore.ts#L152)
-      appends the new FEN instead of popping. Change to `state.moveHistory.slice(0, -1)`.
-      `sanHistory` already pops correctly, so the two arrays currently diverge.
-- [ ] **`undo()` wipes the last-move highlight** — it sets `lastMove: null`. Restore the
-      *previous* move by reading the last entry of `chess.history({ verbose: true })` after
-      the undo and setting `{ from, to }` from it (null when history is empty).
-- [ ] **Notification overlay swallows board clicks** —
+- [x] **`undo()` corrupts `moveHistory`** — appended the new FEN instead of popping. Now
+      `state.moveHistory.slice(0, -1)`, restoring the invariant
+      `moveHistory.length === sanHistory.length + 1`.
+- [x] **`undo()` wipes the last-move highlight** — set `lastMove: null`. Now re-points at
+      `chess.history({ verbose: true }).at(-1)`, so the highlight walks backwards with the
+      undos and clears only at the start position. Verified against chess.js directly.
+- [x] **Notification overlay swallows board clicks** —
       [gameNotifications.tsx:39](src/components/notifications/gameNotifications.tsx#L39) is
       `absolute inset-0 z-50` with no `pointer-events-none`, so for the 5s a "Check!" is up,
       every click on the board only dismisses the toast. Add `pointer-events-none` to the
@@ -48,8 +63,15 @@ Three decisions already made:
       with no explanation. Fixed by the game-over card in Phase 4.
 - [ ] **Fake-permanent notifications** — `duration: 999999` produces a progress bar with
       `animationDuration: 999999ms` that visibly never moves. Removed in Phase 4.
-- [ ] **Stale comment** — sensor comment says 8px, code says
-      `distance: 4` ([chessboard.tsx:320-323](src/components/chessboard/chessboard.tsx#L320-L323)).
+- [x] **Stale comment** — sensor comment said 8px, code says `distance: 4`. Comment corrected.
+
+**Found while fixing undo — blocks Phase 4's jump-to-ply:** `loadPGN` sets
+`moveHistory: [ns.fen]` (length 1) while filling `sanHistory` with the full game
+([useGameStore.ts:202-209](src/store/useGameStore.ts#L202-L209)), so the two arrays are
+inconsistent immediately after a PGN load and `undo()` would drain `moveHistory` past empty.
+Harmless today — nothing reads `moveHistory`, and `loadPGN` is unreachable from the UI — but
+Phase 4 replays positions from that array. Fix by rebuilding the FEN trail during load: replay
+`chess.history()` into a scratch `Chess` and collect a FEN per ply.
 
 ---
 
@@ -93,19 +115,33 @@ to `boolean` — but `lastMoveEvent` is the source of truth.
 
 - [ ] `src/lib/sounds.ts` — a small manifest-driven player. One lazily-created `HTMLAudioElement`
       per sample, `preload="auto"`, `play()` resets `currentTime` so rapid moves retrigger.
-      Missing file = silent no-op, never a thrown error.
+      Missing file = silent no-op, never a thrown error. Needs a `playThen(a, b, delayMs)` for the
+      checkmate sequence, and must cancel a pending follow-up on reset/undo so thunder doesn't
+      roll in over a board that has already moved on.
 - [ ] `src/hooks/useMoveSounds.ts` — subscribes to `positionVersion`, reads `lastMoveEvent`,
-      picks a sample by priority: `checkmate` > `check` > `promote` > `castle` > `capture` > `move`.
-      Plus `gameEnd` for stalemate/draw and `illegal` for a rejected move.
-      Mount it once, alongside `useGameNotifications` inside the board.
+      mounted once alongside `useGameNotifications`. Resolution order:
+
+      | Condition | Sound |
+      |---|---|
+      | checkmate | `checkmate` → `gameEnd` (~0.4s later) |
+      | stalemate / threefold / fifty-move / insufficient | `draw` |
+      | move gives check | `check` |
+      | promotion | `promote` |
+      | castle (either side) | `castle` |
+      | capture, incl. en passant | `capture` |
+      | anything else | `move` |
+
+      Only the first match fires — a capture that also gives check plays `check`, not both.
+- [ ] `illegal` is **not** part of that chain. It fires from `handleDragEnd` in `chessboard.tsx`
+      when `over` exists but is not in `targets` — the one moment the player expressed intent and
+      currently gets nothing back. A drag released off-board (`over == null`) stays silent.
 - [ ] `src/store/useSettingsStore.ts` — zustand + `persist` middleware, holding `muted`,
       `orientation`, `showCoordinates`. A mute toggle button next to Undo/Reset.
 - [ ] Respect `prefers-reduced-motion` for animation only, not audio.
 
-**Needs assets from you:** drop 8 files into `public/sounds/` —
-`move.mp3`, `capture.mp3`, `castle.mp3`, `check.mp3`, `promote.mp3`, `checkmate.mp3`,
-`gameEnd.mp3`, `illegal.mp3`. Any open-license set works (lichess ships CC0 samples). The code
-degrades to silence for any that are missing, so this doesn't block the rest of the work.
+Loudness is already mastered per the set's README — gameplay clicks peak near -1.4 dBFS,
+`checkmate`/`gameEnd` around -12 LUFS, `draw` softer at -16 LUFS. Do not add per-sound gain
+without a reason; the balance is deliberate.
 
 No autoplay problem: sounds only fire after a move, which is always a user gesture.
 
@@ -114,16 +150,28 @@ No autoplay problem: sounds only fire after a move, which is always a user gestu
 ## Phase 3 — Board visual upgrade
 
 ### Piece art
-- [ ] `src/components/chessboard/pieces/` — hand-authored flat-silhouette SVG set, one component
-      per type, driven by `currentColor` + a stroke so both colors read on both square shades.
-- [ ] `PieceIcon` wrapper (`type`, `color`, `size`) as the single render point. Replaces
+`PieceIcon` is **already written** and delivered — this phase is wiring, not authoring.
+
+- [ ] Relocate the pack first (see *Asset inventory*), then verify it type-checks in isolation.
+- [ ] `PieceIcon` (`type`, `color`, `size`, `outline`) as the single render point. Replaces
       `getPieceSymbol` in [draggablePiece.tsx](src/components/chessboard/draggablePiece.tsx),
       the `DragOverlay` ([chessboard.tsx:487-504](src/components/chessboard/chessboard.tsx#L487-L504)),
       [PlayerSection.tsx:84](src/components/sidebar/PlayerSection.tsx#L84), and
       `promotionModal.tsx`. Keep `getPieceSymbol` in [lib/utils.ts](src/lib/utils.ts) only if
       something still needs text.
 - [ ] Pieces size to the measured `cell` value, so `text-5xl` in `draggablePiece.tsx` goes away
-      and the board becomes size-independent.
+      and the board becomes size-independent. `PieceIcon` accepts `size` in px and falls back to
+      `100%` when omitted — passing `cell` directly is the intended usage.
+- [ ] `PieceIcon` takes chess.js codes (`"n"`, `"w"`) as well as full names, so `PieceVM` values
+      pass straight through with no mapping layer. ✅ `PieceVM` was tightened during step 0, so
+      this now type-checks. Remaining: the `as PieceType` cast at
+      [chessboard.tsx:466](src/components/chessboard/chessboard.tsx#L466) is redundant once
+      `getPieceSymbol` is replaced — delete it with the swap.
+- [ ] Note it renders its own `role="img"` + `aria-label` from `type`/`color`. That is the
+      accessible name for pieces — so in Phase 6, label the *square*, not the piece, or the two
+      will fight. Pass `title` when a more specific label is wanted.
+- [ ] Sidebar captured pieces currently render at `text-[1.4rem]`; give `PieceIcon` an explicit
+      px `size` there instead, and drop the `outline` halo at that scale if it muddies.
 
 ### Geometry consolidation (prerequisite for board flip)
 - [ ] `src/lib/boardGeometry.ts` — `idxToSquare`, `parseSquare`, `squareToXY`, `isPromotionMove`,
@@ -272,6 +320,9 @@ three `alt=` attributes and nothing else.
 - [ ] `createInitialBoard` in [src/lib/board.ts](src/lib/board.ts) — pre-chess.js vestige, unimported.
 - [ ] `toAlgebraic` in [src/lib/utils.ts:17](src/lib/utils.ts#L17) — superseded by
       `boardGeometry.ts`.
+- [ ] In [types/chess.ts](src/types/chess.ts): `Coord` and `BoardSquare` have zero usages outside
+      the types file, and `Piece.hasMoved` is a pre-chess.js leftover read only by the dead
+      `createInitialBoard` — chess.js tracks castling rights itself. Drop all three.
 - [ ] The **outer empty `DndContext`** wrapping the whole app in
       [clientProvider.tsx](src/components/clientProvider/clientProvider.tsx) — leftover from
       react-dnd; the board nests its own inside it.
@@ -282,6 +333,11 @@ three `alt=` attributes and nothing else.
       `globals.css`.
 - [ ] Filename casing is split — `sidebar/GameSidebar.tsx`, `PlayerSection.tsx`,
       `MoveHistory.tsx` are PascalCase; everything else in the repo is camelCase. Pick one.
+- [ ] The only lint warning in the repo: an unused `eslint-disable` for
+      `@typescript-eslint/no-unused-expressions` at
+      [chessboard.tsx:225](src/components/chessboard/chessboard.tsx#L225), guarding the
+      forced-layout `el.getBoundingClientRect()` in the FLIP effect. The rule no longer fires;
+      delete the directive. (Pre-existing, unrelated to the piece relocation.)
 
 ### Tests (optional but cheap)
 There are no tests of any kind. Add `vitest` and cover the store only — `makeMove` /
@@ -293,8 +349,9 @@ caught the `moveHistory` bug.
 
 ## Suggested order
 
+0. Relocate the piece pack + re-sync `docs/UI_PLAN.md` — mechanical, no logic.
 1. Phase 0 (bugs) + Phase 1 (`lastMoveEvent`) — small, unblocks everything.
-2. Phase 3 geometry consolidation + `PieceIcon` — the largest visual win.
+2. Phase 3 geometry consolidation + `PieceIcon` wiring — the largest visual win.
 3. Phase 2 sound + Phase 4 ticker — both consume `lastMoveEvent`.
 4. Phase 4 game-over card + sidebar polish.
 5. Phase 3 responsive + Phase 5 foundations.
@@ -304,51 +361,92 @@ Phases 2 and 4's ticker can land the same day once Phase 1 exists.
 
 ---
 
-## Asset brief (source these before implementation)
+## Asset inventory (delivered — commit `bff686d`)
 
-Self-contained spec so this can be handed to a separate session.
+### Sounds — `public/sounds/` ✅
+Nine files, not the eight originally specced. `gameEnd` was re-purposed and `draw` added:
 
-### Sounds → `public/sounds/`
+| File | Fires when |
+|---|---|
+| `move.mp3` | any quiet move — wooden knock |
+| `capture.mp3` | any capture, incl. en passant — two-piece clack |
+| `castle.mp3` | either side — two quick knocks |
+| `check.mp3` | move delivers check — knock + ascending blips |
+| `promote.mp3` | pawn promotes — knock + rising arpeggio |
+| `illegal.mp3` | drag released on a non-legal square — two-beep error |
+| `checkmate.mp3` | the mating move — lightning crack |
+| `gameEnd.mp3` | queued ~0.4s behind `checkmate` — rolling thunder, 5s |
+| `draw.mp3` | stalemate / threefold / fifty-move / insufficient — rain, 5s |
 
-Eight files, `.mp3` (or `.webm` — update the manifest in `src/lib/sounds.ts` to match). Short:
-40–200ms each except `gameEnd`. Normalise loudness across the set so `capture` doesn't
-dwarf `move`. Mono is fine.
+`public/sounds/README.txt` documents the mastering. Note its closing line: move/capture, the
+storm one-shots and the error beep are derived from recordings Phil supplied — worth confirming
+those sources are cleared before the project goes public.
 
-| File | Fires when | Character |
-|---|---|---|
-| `move.mp3` | any quiet move | soft wood click, the most-heard sound — keep it understated |
-| `capture.mp3` | any capture, incl. en passant | sharper/heavier than `move` |
-| `castle.mp3` | kingside or queenside | double-click, two pieces landing |
-| `check.mp3` | move delivers check | short alert tone, distinct from capture |
-| `promote.mp3` | pawn promotes | brighter, rising |
-| `checkmate.mp3` | game ends in mate | decisive, longer |
-| `gameEnd.mp3` | stalemate or draw | neutral, non-triumphant |
-| `illegal.mp3` | rejected move attempt | dull thud, quiet — fires on user error |
+### Piece art — currently `src/components/pieces/` ⚠️ needs relocating
+The lichess **mono** set, **GPLv2+**, arrived as a self-contained pack that preserved its intended
+destination path inside itself. First implementation step is to unpack it:
 
-Lichess ships a CC0 set (their "standard" theme) that maps almost 1:1 to this list and is the
-path of least resistance. Any open-license set works. **Missing files are a silent no-op**, so
-partial delivery is fine — implementation isn't blocked on this.
+```
+src/components/pieces/src/components/chessboard/pieces/{PieceIcon,glyphs,index}.tsx, types.ts
+                                    ↓  git mv
+src/components/chessboard/pieces/
+```
+Target layout (decided):
 
-### Piece art → `public/pieces/<set>/`
+```
+THIRD-PARTY-NOTICES.md              ← new, short; points at the pieces NOTICE
+docs/piece-set-preview.png          ← moved out of src/
+src/types/chess.ts                  ← absorbed the pack's types.ts
+src/components/chessboard/pieces/
+├── PieceIcon.tsx  glyphs.tsx  index.tsx
+├── NOTICE.md  LICENSE-GPL-2.0.txt
+└── svg/  (incl. mono-original/)
+```
 
-Two viable routes; pick one.
+The pack shipped its own `types.ts` declaring `PieceType = "king" | ...` and
+`PieceColor = "white" | "black"` — the **same names as `@/types/chess` with opposite meanings**
+(codes there, long names here). Resolved by folding it into `src/types/chess.ts` and renaming to
+`PieceName` / `PieceShade`, so all piece vocabulary sits in one file under three labelled
+sections (Codes / Names / Board) with the contrast visible at a glance. The pack's third
+redeclaration of the code union (`PieceCode`) is gone — `CODE_TO_NAME` is keyed by `PieceType`,
+leaving one declaration in the repo. Also added `COLOR_TO_SHADE`.
 
-**Route A — source a standard set (recommended if sourcing anyway).** Twelve SVGs, named
-`wK wQ wR wB wN wP bK bQ bR bB bN bP` (`.svg`). Requirements:
-- Square `viewBox` (`0 0 45 45` is the cburnett convention) so they scale to any cell size.
-- Transparent background, no baked-in square colour.
-- Both colours must read against **both** `#f0d9b5` and `#b58863` — white pieces need a dark
-  outline stroke, black pieces a light one. This is the specific failure of the current Unicode
-  glyphs, so check it explicitly.
-- **Record the license.** cburnett is CC-BY-SA 3.0 and needs attribution somewhere in the app;
-  merida and alpha have their own terms. Note whichever applies in the repo.
+`PieceVM` was tightened at the same time: `type: string` → `PieceType`, and an inline
+`"w" | "b"` → `PieceColor`. Compiles with no other file changed — the field was simply typed
+wider than what `createBoardFromFEN` produces.
 
-**Route B — hand-authored flat set.** No sourcing, no license question, written as inline React
-components. Flat silhouettes rather than Staunton line art. This was the original plan and remains
-the fallback if Route A stalls.
+`index.tsx` is trimmed to re-exports; its six `KingPiece`/`QueenPiece`/… convenience components
+were unused and always would be, since pieces render dynamically by type.
 
-Either way everything renders through one `PieceIcon` component, so switching sets later is a
-one-file change.
+- Use `git mv` throughout so history follows the files.
+- **Fix the relative license paths** in the header comments of `PieceIcon.tsx` and `glyphs.tsx` —
+  both point at `../../../../LICENSE-GPL-2.0.txt`, which breaks on the move. They become
+  `./LICENSE-GPL-2.0.txt` and `./NOTICE.md`.
+- Keep `svg/` including `svg/mono-original/` — `NOTICE.md` cites it as the unmodified source,
+  which is what makes the "only the fill/stroke layering changed" claim verifiable. Unused at
+  runtime (`glyphs.tsx` has the paths inline), but cheap and it backs the notice.
+- Delete the pack's `README.md` — its wiring notes are captured in Phase 3 above, and
+  `PieceIcon.tsx` is 70 typed lines that document themselves.
+- Then delete the empty `src/components/pieces/` shell.
+- `THIRD-PARTY-NOTICES.md` at root: a few lines naming the mono set, GPLv2+, and the path to the
+  full notice. Deliberately **not** a root `LICENSE-GPL-2.0.txt` — see the license note below.
+
+The pack is complete and correct: all six glyphs, `PieceIcon`, `types.ts`, a barrel `index.tsx`
+with per-piece convenience components, and a two-layer render (body + contrasting halo) that the
+preview confirms reads on both square shades.
+
+**License note:** the mono geometry is GPLv2+; `NOTICE.md` scopes the copyleft to the art alone
+and leaves the surrounding app under its own terms — the standard aggregation position, and a
+reasonable one for art assets.
+
+Keeping `LICENSE-GPL-2.0.txt` **beside the art rather than at the repo root** is deliberate: a
+bare GPL file at root makes GitHub label the entire project GPL-2.0, which would misrepresent the
+codebase and close off options if Pawnstorm ever goes commercial. The root
+`THIRD-PARTY-NOTICES.md` gives the same visibility without that side effect. The pack's own
+README endorses either placement.
+
+Pawnstorm itself has no license file yet. Worth adding one at some point so the root isn't
+ambiguous — not part of this plan.
 
 ### Not needed
 No board textures, backgrounds, avatars, or icon fonts. Board squares stay flat colour tokens,
@@ -371,10 +469,15 @@ Scenarios to walk through:
    cleanly, and selecting a piece fires the promote sound + `=♕` pill.
 4. **Check** — deliver check, confirm the king square glows, the toast is small and
    **does not block clicking the board**, and the check sound fires.
-5. **Checkmate** — Scholar's mate. Confirm the persistent game-over card, working New Game and
-   Take-back buttons, and that the board locks.
-6. **Draws** — load a threefold/insufficient-material position via `loadFEN` from the console and
-   confirm the game-over card names the correct reason.
+5. **Checkmate** — Scholar's mate. Confirm the crack lands on the mating move with thunder
+   rolling in behind it, the persistent game-over card, working New Game and Take-back buttons,
+   and that the board locks.
+6. **Thunder cancellation** — deliver mate, then hit New Game during the 5s thunder. The pending
+   follow-up must not fire over the fresh board.
+7. **Draws** — load a threefold/insufficient-material position via `loadFEN` from the console and
+   confirm `draw.mp3` (rain, not thunder) plays and the game-over card names the correct reason.
+8. **Illegal drag** — drag a knight onto an occupied friendly square and release: error beep,
+   piece snaps back. Then drag one clean off the board edge and release: silent, no beep.
 7. **Undo** — make five moves including a capture, undo all five, confirm `moveHistory` and
    `sanHistory` stay the same length (this is the Phase 0 bug), the captured tray empties
    correctly, and the last-move highlight tracks backwards.

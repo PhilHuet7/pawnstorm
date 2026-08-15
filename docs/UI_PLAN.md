@@ -8,9 +8,9 @@
 > related group) at a time, explain the change, and stop for review before moving on. Do not
 > batch a whole phase into a single sweep.
 >
-> **Progress:** step 0 (relocation + type consolidation) and Phase 0 are ✅ done — except the
-> two items explicitly deferred to Phase 4 (draw notifications, the `duration: 999999` hack).
-> Phase 1 (`lastMoveEvent`) is next.
+> **Progress:** step 0, Phase 0, and Phase 1 are ✅ done — except two Phase 0 items explicitly
+> deferred to Phase 4 (draw notifications, the `duration: 999999` hack). Phase 2 (sound) is next,
+> and `lastMoveEvent` is now on the store ready to drive it.
 >
 > A copy of this document lives at `docs/UI_PLAN.md`; re-copy it whenever this file changes.
 
@@ -98,13 +98,21 @@ pattern `useGameNotifications` already uses: put the event in the store and let 
       };
       lastMoveEvent: MoveEvent | null;
       ```
-- [ ] Populate it inside `makeMove` from the chess.js `Move` object — it already exposes
-      `isEnPassant()` (used today at [useGameStore.ts:134](src/store/useGameStore.ts#L134)),
-      plus `isKingsideCastle()`, `isQueensideCastle()`, `isPromotion()`, `isCapture()`.
-      Fall back to parsing `result.flags` (`k`/`q`/`e`/`c`/`p`) if any method is absent in 1.4.0.
-      Set `lastMoveEvent: null` in `undo` / `reset` / `loadFEN` / `loadPGN`.
-- [ ] Also add `checkSquare: Square | null` to `snapshot()` — scan `chess.board()` for the
-      king of the side to move when `inCheck`. Needed for the check highlight in Phase 3.
+- [x] Populated inside `makeMove` from the chess.js `Move` object. All six helper methods exist
+      in 1.4.0, so no `flags` parsing was needed. `lastMoveEvent` is nulled in `undo` / `reset` /
+      `loadFEN` / `loadPGN` — nothing was *played*, so nothing should sound or tick.
+- [x] `checkSquare: Square | null` added to `snapshot()`. `chess.board()` cells carry their own
+      `square`, so it's a `.flat().find()` for the king of the side to move — no index math.
+
+> ⚠️ **`isCapture()` returns `false` for en passant** (flags `"e"`, not `"c"`), but `captured`
+> is still set to `"p"`. **Always test captures with `captured !== undefined`, never
+> `isCapture()`.** This is the trap for Phase 2's sound table and Phase 4's ticker, both of
+> which must treat en passant as a capture. Verified against chess.js directly, and noted in
+> the `MoveEvent` doc comment.
+
+Derivation verified across every move type — quiet, capture, en passant, both castles,
+promotion-with-capture, check-without-mate, and checkmate — including that `check`/`checkmate`
+are read from the post-move snapshot rather than the move object.
 
 Widening the `MoveResult` return type is unnecessary; nothing consumes it. Leave it, or drop it
 to `boolean` — but `lastMoveEvent` is the source of truth.

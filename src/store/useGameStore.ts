@@ -13,12 +13,37 @@ type MoveResult =
 
 type DrawReason = "threefold" | "fiftyMove" | "insufficient" | "stalemate";
 
+/**
+ * Everything the UI needs to react to a single move — sounds, the move ticker,
+ * notifications. Recorded on the store rather than returned from `makeMove` so
+ * consumers can subscribe to `positionVersion` instead of each call site having
+ * to thread the result through.
+ *
+ * `captured` is set for en passant too, whereas chess.js `isCapture()` is not —
+ * so treat `captured !== undefined` as the capture test, never `isCapture()`.
+ */
+export type MoveEvent = {
+  san: string;
+  color: "w" | "b";
+  piece: PieceSymbol;
+  from: Square;
+  to: Square;
+  captured?: PieceSymbol;
+  enPassant: boolean;
+  castle: "k" | "q" | null;
+  promotion?: PieceSymbol;
+  check: boolean;
+  checkmate: boolean;
+};
+
 type GameState = {
   // core, derived, and history
   chess: Chess;
   fen: string;
   turn: "w" | "b";
   lastMove: { from: Square; to: Square } | null;
+  /** Detail of the move that produced the current position; null after undo/reset/load. */
+  lastMoveEvent: MoveEvent | null;
   moveHistory: string[];
   sanHistory: string[];
   positionVersion: number;
@@ -46,6 +71,8 @@ type GameState = {
 
   // status flags
   inCheck: boolean;
+  /** Square of the king that is currently in check, for board highlighting. */
+  checkSquare: Square | null;
   checkmate: boolean;
   stalemate: boolean;
   draw: boolean;
@@ -68,10 +95,22 @@ export const useGameStore = create<GameState>((set, get) => {
             : "fiftyMove"
       : undefined;
 
+    const inCheck = chess.inCheck();
+    // The side to move is the one in check, so locate its king for highlighting.
+    // board() cells carry their own `square`, so no index math is needed.
+    const checkSquare = inCheck
+      ? (chess
+          .board()
+          .flat()
+          .find((c) => c && c.type === "k" && c.color === chess.turn())
+          ?.square ?? null)
+      : null;
+
     return {
       fen: chess.fen(),
       turn: chess.turn(),
-      inCheck: chess.inCheck(),
+      inCheck,
+      checkSquare,
       checkmate: chess.isCheckmate(),
       stalemate: chess.isStalemate(),
       draw,
@@ -87,12 +126,14 @@ export const useGameStore = create<GameState>((set, get) => {
     fen: s.fen,
     turn: s.turn,
     inCheck: s.inCheck,
+    checkSquare: s.checkSquare,
     checkmate: s.checkmate,
     stalemate: s.stalemate,
     draw: s.draw,
     drawReason: s.drawReason,
 
     lastMove: null,
+    lastMoveEvent: null,
     moveHistory: [s.fen],
     sanHistory: [],
 
@@ -110,9 +151,30 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!result) return { ok: false, reason: "illegal" };
 
       const ns = snapshot();
+      const event: MoveEvent = {
+        san: result.san,
+        color: result.color,
+        piece: result.piece,
+        from,
+        to,
+        captured: result.captured,
+        enPassant: result.isEnPassant(),
+        castle: result.isKingsideCastle()
+          ? "k"
+          : result.isQueensideCastle()
+            ? "q"
+            : null,
+        promotion: result.promotion,
+        // check/checkmate describe the position *after* the move, so they come
+        // from the fresh snapshot rather than from the move object.
+        check: ns.inCheck,
+        checkmate: ns.checkmate,
+      };
+
       set((state) => ({
         ...ns,
         lastMove: { from, to },
+        lastMoveEvent: event,
         moveHistory: [...state.moveHistory, ns.fen],
         sanHistory: [...state.sanHistory, result.san],
         positionVersion: state.positionVersion + 1,
@@ -152,6 +214,8 @@ export const useGameStore = create<GameState>((set, get) => {
       set((state) => ({
         ...ns,
         lastMove: prev ? { from: prev.from, to: prev.to } : null,
+        // No event: nothing was *played*, so nothing should sound or tick.
+        lastMoveEvent: null,
         moveHistory: state.moveHistory.slice(0, -1),
         sanHistory: state.sanHistory.slice(0, -1),
         positionVersion: state.positionVersion + 1,
@@ -170,6 +234,7 @@ export const useGameStore = create<GameState>((set, get) => {
       set((state) => ({
         ...ns,
         lastMove: null,
+        lastMoveEvent: null,
         moveHistory: [ns.fen],
         sanHistory: [],
         positionVersion: state.positionVersion + 1,
@@ -187,6 +252,7 @@ export const useGameStore = create<GameState>((set, get) => {
       set((state) => ({
         ...ns,
         lastMove: null,
+        lastMoveEvent: null,
         moveHistory: [ns.fen],
         sanHistory: [],
         positionVersion: state.positionVersion + 1,
@@ -205,6 +271,7 @@ export const useGameStore = create<GameState>((set, get) => {
       set((state) => ({
         ...ns,
         lastMove: null,
+        lastMoveEvent: null,
         moveHistory: [ns.fen],
         sanHistory: chess.history(),
         positionVersion: state.positionVersion + 1,

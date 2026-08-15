@@ -19,6 +19,9 @@ import DroppableSquare from "@/components/chessboard/droppableSquare";
 import DraggablePiece from "@/components/chessboard/draggablePiece";
 import PromotionModal from "@/components/chessboard/promotionModal";
 import GameNotifications from "@/components/notifications/gameNotifications";
+import { useMoveSounds } from "@/hooks/useMoveSounds";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { play } from "@/lib/sounds";
 
 const files = "abcdefgh";
 
@@ -75,6 +78,10 @@ const Chessboard = () => {
   const checkmate = useGameStore((s) => s.checkmate);
   const stalemate = useGameStore((s) => s.stalemate);
   const draw = useGameStore((s) => s.draw);
+  const muted = useSettingsStore((s) => s.muted);
+
+  // Plays a sound for each move that lands; mounted once here.
+  useMoveSounds();
 
   // derived board matrix
   const board = useMemo(() => createBoardFromFEN(fen), [fen]);
@@ -348,6 +355,12 @@ const Chessboard = () => {
         lastMovedByDragRef.current = true;
         makeMove(from, to);
       }
+    } else if (from && to && to !== from && !muted) {
+      // Released over a real square that isn't a legal target — the one moment
+      // the player expressed intent and would otherwise get no feedback.
+      // Dropping back on the origin square is a cancel, not an error, and a
+      // drag released off the board (no `over`) stays silent.
+      play("illegal");
     }
 
     // Always clear selection on drag end whether legal or not.

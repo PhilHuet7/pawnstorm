@@ -8,9 +8,9 @@
 > related group) at a time, explain the change, and stop for review before moving on. Do not
 > batch a whole phase into a single sweep.
 >
-> **Progress:** step 0, Phase 0, and Phase 1 are ✅ done — except two Phase 0 items explicitly
-> deferred to Phase 4 (draw notifications, the `duration: 999999` hack). Phase 2 (sound) is next,
-> and `lastMoveEvent` is now on the store ready to drive it.
+> **Progress:** step 0 and Phases 0–2 are ✅ done — except two Phase 0 items explicitly deferred
+> to Phase 4 (draw notifications, the `duration: 999999` hack). Phase 3 (board visuals: piece
+> wiring, geometry consolidation, board flip, responsive) is next.
 >
 > A copy of this document lives at `docs/UI_PLAN.md`; re-copy it whenever this file changes.
 
@@ -119,18 +119,39 @@ to `boolean` — but `lastMoveEvent` is the source of truth.
 
 ---
 
-## Phase 2 — Sound
+## Phase 2 — Sound  ✅
 
-- [ ] `src/lib/sounds.ts` — a small manifest-driven player. One lazily-created `HTMLAudioElement`
-      per sample, `preload="auto"`, `play()` resets `currentTime` so rapid moves retrigger.
-      Missing file = silent no-op, never a thrown error. Needs a `playThen(a, b, delayMs)` for the
-      checkmate sequence, and must cancel a pending follow-up on reset/undo so thunder doesn't
-      roll in over a board that has already moved on.
-- [ ] `src/hooks/useMoveSounds.ts` — subscribes to `positionVersion`, reads `lastMoveEvent`,
-      mounted once alongside `useGameNotifications`. Resolution order:
+- [x] **`src/lib/sounds.ts`** — manifest-driven player. Lazy `HTMLAudioElement` per sample,
+      `preload="auto"`, rewind-before-play so rapid moves retrigger. Every failure path is a
+      silent no-op: missing file, blocked autoplay, or SSR. Exports `play`, `playSequence`,
+      `cancelPending`, `stopAll`. Deliberately knows nothing about game state or settings.
+- [x] **`src/store/useSettingsStore.ts`** — zustand + `persist` holding `muted`, `orientation`,
+      `showCoordinates` (the latter two land in Phase 3). Uses **`skipHydration: true`** with
+      `rehydrate()` called from a `ClientProvider` effect — rehydrating at module load runs
+      before React hydrates and desyncs the first client render from the server HTML.
+- [x] **`src/hooks/useMoveSounds.ts`** — keyed off `positionVersion` like
+      `useGameNotifications`, reads the rest via `getState()`. Exports the pure `soundForMove`
+      resolver separately from the hook so the decision table is testable.
+- [x] **Mute toggle** — `soundToggle.tsx`, added to the `UndoResetButtons` row. Calls `stopAll()`
+      when muting so it takes effect immediately rather than after the current sound. Carries
+      `aria-pressed` and an `aria-label`.
+- [x] **`illegal`** fires from `handleDragEnd` when `over` is a real square that is not a legal
+      target. Two exclusions beyond the plan: a drop back on the **origin square** is a cancel,
+      not an error, and a drag released **off-board** (`over == null`) stays silent.
 
-      | Condition | Sound |
-      |---|---|
+Resolution verified against real chess.js positions — quiet, capture, en passant, castle,
+promotion-with-capture, check, checkmate, stalemate, and insufficient material all map to the
+intended sound. En passant correctly resolves to `capture`, which is the case `isCapture()`
+would have broken.
+
+Terminal states are tested *before* per-move ones, so a mating capture sounds like the end of
+the game rather than a capture. Undo/reset/load bump `positionVersion` with a null
+`lastMoveEvent`, which plays nothing and cancels any queued thunder.
+
+`pnpm build` passes with all pages prerendering, confirming no SSR regression from the audio
+layer or the persisted store.
+
+---|---|
       | checkmate | `checkmate` → `gameEnd` (~0.4s later) |
       | stalemate / threefold / fifty-move / insufficient | `draw` |
       | move gives check | `check` |

@@ -7,8 +7,10 @@ const PROMOTION_PIECES: ("q" | "r" | "b" | "n")[] = ["q", "r", "b", "n"];
 
 type Props = {
   color: PieceColor;
-  /** 0–7 column index of the promoting pawn's destination file */
-  fileIdx: number;
+  /** 0–7 column index of the destination square, in *display* coordinates */
+  colIdx: number;
+  /** True when the destination renders on the top row — depends on orientation */
+  fromTop: boolean;
   /** Pixels per square */
   cellSize: number;
   onSelect: (piece: "q" | "r" | "b" | "n") => void;
@@ -17,17 +19,19 @@ type Props = {
 
 export default function PromotionModal({
   color,
-  fileIdx,
+  colIdx,
+  fromTop,
   cellSize,
   onSelect,
   onCancel,
 }: Props) {
-  // White promotes to rank 8 (row 0, top) — show choices from top downward.
-  // Black promotes to rank 1 (row 7, bottom) — show choices from bottom upward
-  // so the queen is always adjacent to the promotion square.
-  const pieces: PieceType[] =
-    color === "w" ? PROMOTION_PIECES : [...PROMOTION_PIECES].reverse();
-  const topRow = color === "w" ? 0 : 4;
+  // Fan the choices away from the edge the pawn landed on, so the queen is
+  // always the square adjacent to the promotion square. Which edge that is
+  // depends on board orientation, not on colour.
+  const pieces: PieceType[] = fromTop
+    ? PROMOTION_PIECES
+    : [...PROMOTION_PIECES].reverse();
+  const topRow = fromTop ? 0 : 4;
 
   return (
     <>
@@ -42,7 +46,7 @@ export default function PromotionModal({
       <div
         className="absolute z-50 flex flex-col shadow-xl rounded overflow-hidden"
         style={{
-          left: fileIdx * cellSize,
+          left: colIdx * cellSize,
           top: topRow * cellSize,
           width: cellSize,
           height: 4 * cellSize,

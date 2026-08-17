@@ -10,7 +10,7 @@
 >
 > **Progress:** step 0 and Phases 0–2 are ✅ done, plus Phase 3's **piece wiring**. Two Phase 0
 > items remain deferred to Phase 4 (draw notifications, the `duration: 999999` hack).
-> Next in Phase 3: geometry consolidation → board flip → square rendering → responsive.
+> Next in Phase 3: square rendering (7 items) → responsive (3 items).
 >
 > A copy of this document lives at `docs/UI_PLAN.md`; re-copy it whenever this file changes.
 
@@ -228,12 +228,30 @@ Incidental find: the app serves **no favicon** — `/favicon.ico`, `/icon.png` a
 `/apple-icon.png` all 404. Pre-existing and cosmetic; added to Phase 6.
 
 ### Geometry consolidation (prerequisite for board flip)
-- [ ] `src/lib/boardGeometry.ts` — `idxToSquare`, `parseSquare`, `squareToXY`, `isPromotionMove`,
-      each taking an `orientation: "w" | "b"`. The white-at-bottom assumption is currently
-      duplicated in five places: `chessboard.tsx` (×4), `promotionModal.tsx` (`topRow`), and
-      `toAlgebraic` in `lib/utils.ts`. Consolidate, then delete the duplicates.
-- [ ] Wire `orientation` from `useSettingsStore` + a flip button. Local multiplayer gets an
-      auto-flip option; online play will set it from the assigned color.
+- [x] **`src/lib/boardGeometry.ts`** — done, but the split turned out to be the real work.
+      There are **two** grids, not one, and they only coincide when white is at the bottom:
+
+      | family | used for | flips? |
+      |---|---|---|
+      | `squareToBoardIdx` / `boardIdxToSquare` | indexing the `createBoardFromFEN` matrix (always rank 8 at row 0) | no |
+      | `idxToSquare` / `squareToIdx` / `squareToXY` | on-screen position | yes |
+
+      Conflating them is what silently breaks flip. Of the eight call sites in
+      `chessboard.tsx`, four are board-matrix (`findMoveByDiff`, the pieces loop, square
+      click, `isPromotion`) and four are display (FLIP coords, drag overlay, render loop,
+      piece position). Verified all 128 display + 64 board round-trips in both orientations.
+- [x] **Board flip wired** — `orientation` from `useSettingsStore`, plus `flipBoardButton.tsx`
+      in the controls row. `promotionModal` no longer derives its position from piece colour;
+      it takes display `colIdx` + `fromTop`, since which edge the pawn lands on depends on
+      orientation. The old `topRow = color === "w" ? 0 : 4` put white's picker at the top of
+      the screen while the pawn sat at the bottom of a flipped board.
+- [x] The FLIP animation effect deliberately **omits** `orientation` from its deps — flipping
+      should not replay the last move's animation. The drag-overlay memo does include it.
+- [x] **`GameSidebar` follows the flip.** It hardcoded black-top / white-bottom, so flipping put
+      black at the bottom of the board while its panel stayed on top. Panels are now ordered by
+      `orientation`; label, active indicator, and captured pieces travel with the colour.
+      `MoveHistory` column order is deliberately *not* flipped — white's move is always the
+      first column in algebraic notation.
 
 ### Square rendering
 - [ ] `DroppableSquare` currently stacks three highlight states onto one `after:` pseudo-element

@@ -1,6 +1,7 @@
 import React, { HTMLAttributes } from "react";
 import Button from "../ui/button";
 import SoundToggle from "./soundToggle";
+import FlipBoardButton from "./flipBoardButton";
 import clsx from "clsx";
 
 type ComponentProps = HTMLAttributes<HTMLDivElement> & {
@@ -19,6 +20,7 @@ export default function UndoResetButtons({
     <div className={clsx("flex items-center gap-2 mt-3", className)} {...props}>
       <Button onClick={undo}>Undo</Button>
       <Button onClick={reset}>Reset</Button>
+      <FlipBoardButton />
       <SoundToggle />
     </div>
   );

@@ -13,6 +13,14 @@ import {
 } from "@dnd-kit/core";
 import { useGameStore } from "@/store/useGameStore";
 import { createBoardFromFEN } from "@/lib/utils";
+import {
+  boardIdxToSquare,
+  idxToSquare,
+  isPromotionMove,
+  squareToBoardIdx,
+  squareToIdx,
+  squareToXY,
+} from "@/lib/boardGeometry";
 import type { Square } from "chess.js";
 import { PieceVM } from "@/types/chess";
 import { PieceIcon } from "@/components/chessboard/pieces";
@@ -23,32 +31,6 @@ import GameNotifications from "@/components/notifications/gameNotifications";
 import { useMoveSounds } from "@/hooks/useMoveSounds";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { play } from "@/lib/sounds";
-
-const files = "abcdefgh";
-
-const idxToSquare = (rowIndex: number, colIndex: number): Square => {
-  // rowIndex: 0 at top is rank 8; colIndex: 0 is file 'a'
-  const file = files[colIndex];
-  const rank = 8 - rowIndex;
-  return `${file}${rank}` as Square;
-};
-
-const parseSquare = (sq: Square) => ({
-  fileIdx: files.indexOf(sq[0]),
-  rankIdxFromTop: 8 - Number(sq[1]),
-});
-
-// Map a square to pixel coordinates inside the board rect
-const squareToXY = (sq: Square, rect: DOMRect) => {
-  const { fileIdx, rankIdxFromTop } = parseSquare(sq);
-  const cellX = rect.width / 8;
-  const cellY = rect.height / 8;
-  return {
-    x: fileIdx * cellX,
-    y: rankIdxFromTop * cellY,
-    cell: Math.min(cellX, cellY),
-  };
-};
 
 const useBoardRect = () => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -80,6 +62,7 @@ const Chessboard = () => {
   const stalemate = useGameStore((s) => s.stalemate);
   const draw = useGameStore((s) => s.draw);
   const muted = useSettingsStore((s) => s.muted);
+  const orientation = useSettingsStore((s) => s.orientation);
 
   // Plays a sound for each move that lands; mounted once here.
   useMoveSounds();
@@ -131,7 +114,7 @@ const Chessboard = () => {
       for (let col = 0; col < 8; col++) {
         const prevCell = prev[row][col];
         const currCell = curr[row][col];
-        const sq = idxToSquare(row, col);
+        const sq = boardIdxToSquare(row, col);
 
         if (prevCell.piece && !currCell.piece) {
           fromSq = sq;
@@ -177,7 +160,7 @@ const Chessboard = () => {
         const cell = board[row][col];
         if (!cell.piece) continue;
 
-        const sq = idxToSquare(row, col);
+        const sq = boardIdxToSquare(row, col);
         let id: string;
 
         if (movedFrom && movedTo && sq === movedTo) {
@@ -221,8 +204,8 @@ const Chessboard = () => {
     if (!el) return;
 
     // Compute FROM and TO coords
-    const fromXY = squareToXY(lastMove.from, rect);
-    const toXY = squareToXY(lastMove.to, rect);
+    const fromXY = squareToXY(lastMove.from, rect, orientation);
+    const toXY = squareToXY(lastMove.to, rect, orientation);
 
     // 1) Put the mover at its OLD position with no transition
     el.style.willChange = "";
@@ -246,19 +229,16 @@ const Chessboard = () => {
       };
       el.addEventListener("transitionend", onEnd);
     });
+    // `orientation` is intentionally omitted: flipping the board should not
+    // replay the last move's animation. The effect only fires on a new move,
+    // and by then React has re-created it closing over the current orientation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version, rect, moverIdThisFrame, lastMove]);
 
   // Returns true when moving `from` → `to` would trigger pawn promotion
   const isPromotion = (from: Square, to: Square): boolean => {
-    const fileIdx = files.indexOf(from[0]);
-    const rankIdxFromTop = 8 - Number(from[1]);
-    const piece = board[rankIdxFromTop]?.[fileIdx]?.piece;
-    if (!piece || piece.type !== "p") return false;
-    const destRank = Number(to[1]);
-    return (
-      (piece.color === "w" && destRank === 8) ||
-      (piece.color === "b" && destRank === 1)
-    );
+    const { row, col } = squareToBoardIdx(from);
+    return isPromotionMove(board[row]?.[col]?.piece, to);
   };
 
   const handlePromotionSelect = (piece: "q" | "r" | "b" | "n") => {
@@ -292,8 +272,8 @@ const Chessboard = () => {
   const onSquareMouseDown = (coord: Square) => {
     if (readOnly || isGameOver) return;
 
-    const { fileIdx, rankIdxFromTop } = parseSquare(coord);
-    const piece = board[rankIdxFromTop][fileIdx].piece as {
+    const { row, col } = squareToBoardIdx(coord);
+    const piece = board[row][col].piece as {
       color: "w" | "b";
     } | null;
 
@@ -392,6 +372,7 @@ const Chessboard = () => {
         const { x: squareX, y: squareY } = squareToXY(
           activePiece.square as Square,
           rect,
+          orientation,
         );
         // Piece position in viewport coordinates
         const expectedLeft = rect.left + squareX;
@@ -403,7 +384,7 @@ const Chessboard = () => {
         };
       },
     ],
-    [activePiece, rect],
+    [activePiece, rect, orientation],
   );
 
   return (
@@ -426,7 +407,7 @@ const Chessboard = () => {
               const rowIndex = Math.floor(i / 8);
               const colIndex = i % 8;
               const isLight = (rowIndex + colIndex) % 2 === 0;
-              const coord = idxToSquare(rowIndex, colIndex);
+              const coord = idxToSquare(rowIndex, colIndex, orientation);
               const isSelected = selected === coord;
               const isTarget = targets.includes(coord);
               const isLastFrom = lastMove?.from === coord;
@@ -461,7 +442,7 @@ const Chessboard = () => {
           {rect && (
             <div className="absolute inset-0 pointer-events-none">
               {pieces.map((p) => {
-                const { x, y, cell } = squareToXY(p.square, rect);
+                const { x, y, cell } = squareToXY(p.square, rect, orientation);
                 return (
                   <DraggablePiece
                     key={p.id}
@@ -488,7 +469,8 @@ const Chessboard = () => {
           {pendingPromotion && rect && (
             <PromotionModal
               color={turn}
-              fileIdx={files.indexOf(pendingPromotion.to[0])}
+              colIdx={squareToIdx(pendingPromotion.to, orientation).col}
+              fromTop={squareToIdx(pendingPromotion.to, orientation).row === 0}
               cellSize={cellSize}
               onSelect={handlePromotionSelect}
               onCancel={handlePromotionCancel}

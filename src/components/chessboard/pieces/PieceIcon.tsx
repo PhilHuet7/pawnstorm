@@ -25,8 +25,13 @@ const PALETTE: Record<PieceShade, { fill: string; outline: string }> = {
   black: { fill: "#2b2b2b", outline: "#eaeae4" },
 };
 
-const NATIVE_SW = 1.5;   // mono's own stroke width
-const OUTLINE_HALO = 1.9; // extra width each side for the contrasting outline
+const NATIVE_SW = 1.5; // mono's own stroke width
+/**
+ * Extra stroke width per side for the contrasting halo, in viewBox units, so it
+ * scales with `size`. 1.9 reads as a heavy sticker outline; 0.9 just defines the
+ * edge. Drop toward 0.6 for a subtler line.
+ */
+const OUTLINE_HALO = 0.9;
 
 export interface PieceIconProps {
   /** Long name ("knight") or chess.js code ("n"). */
@@ -34,7 +39,15 @@ export interface PieceIconProps {
   /** Long name ("black") or chess.js code ("b"). Omit to inherit CSS `color`. */
   color?: PieceShade | PieceColor;
   size?: number;
-  outline?: boolean;      // contrasting halo; default true
+  /**
+   * Add a contrasting halo around the piece. Off by default — that is the mono
+   * set's native look. Turn it on wherever a piece sits on a surface close to
+   * its own colour: the board (white pieces on light squares), the promotion
+   * picker (white on white), or the navy sidebar (black on navy).
+   */
+  outline?: boolean;
+  /** Halo thickness in viewBox units. Ignored unless `outline` is set. */
+  outlineWidth?: number;
   fill?: string;
   outlineColor?: string;
   className?: string;
@@ -43,7 +56,16 @@ export interface PieceIconProps {
 }
 
 export function PieceIcon({
-  type, color, size, outline = true, fill, outlineColor, className, style, title,
+  type,
+  color,
+  size,
+  outline = false,
+  outlineWidth = OUTLINE_HALO,
+  fill,
+  outlineColor,
+  className,
+  style,
+  title,
 }: PieceIconProps) {
   const name: PieceName =
     type.length === 1 ? CODE_TO_NAME[type as PieceType] : (type as PieceName);
@@ -66,7 +88,7 @@ export function PieceIcon({
     >
       {title ? <title>{title}</title> : null}
       {outline ? (
-        <g fill="var(--po)" stroke="var(--po)" strokeWidth={NATIVE_SW + 2 * OUTLINE_HALO}
+        <g fill="var(--po)" stroke="var(--po)" strokeWidth={NATIVE_SW + 2 * outlineWidth}
            strokeLinecap="round" strokeLinejoin="round" fillRule={g.fillRule}>
           {g.inner}
         </g>

@@ -5,8 +5,8 @@ repository is Pawnstorm's own code under its own terms.
 
 ## Chess piece art — lichess "mono" set
 
-- **Where:** `src/components/chessboard/pieces/` (path geometry in `glyphs.tsx`,
-  reference SVGs in `svg/`, unmodified originals in `svg/mono-original/`)
+- **Where:** `src/components/chessboard/pieces/` — path geometry in `glyphs.tsx`,
+  with the unmodified originals kept in `svg/mono-original/` for comparison
 - **Copyright:** the Lichess authors
 - **Source:** https://github.com/lichess-org/lila (`public/piece/mono`)
 - **License:** GNU General Public License, version 2 or later (GPLv2+)

@@ -47,14 +47,12 @@ export default function DraggablePiece({
   return (
     <span
       ref={combinedRef}
-      className="absolute pointer-events-auto select-none text-5xl z-40"
+      className="absolute pointer-events-auto select-none z-40"
       style={{
         // FLIP animation writes directly to this transform after each move.
         transform: `translate3d(${x}px, ${y}px, 0)`,
         width: `${cell}px`,
         height: `${cell}px`,
-        lineHeight: `${cell}px`,
-        textAlign: "center",
         // Hide the origin piece while dragging; DragOverlay shows it instead.
         opacity: isDragging ? 0 : 1,
         touchAction: "none",

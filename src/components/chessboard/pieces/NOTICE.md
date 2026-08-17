@@ -1,16 +1,18 @@
 # Chess piece art — attribution & license
 
-The chess piece shapes in `src/components/chessboard/pieces/glyphs.tsx` and the
-files in `svg/` are the **"mono"** piece set from the Lichess project (lila).
+The chess piece shapes in `src/components/chessboard/pieces/glyphs.tsx`, and the
+unmodified originals in `svg/mono-original/`, are the **"mono"** piece set from
+the Lichess project (lila).
 
 - Copyright (C) the Lichess authors
 - Source: https://github.com/lichess-org/lila (`public/piece/mono`)
 - License: **GNU General Public License, version 2 or later (GPLv2+)** — full
   text in `LICENSE-GPL-2.0.txt`.
-- Modifications: the original single-color paths were split into a two-layer
-  render (a `currentColor` body plus a contrasting outline) in `PieceIcon.tsx`.
-  The path data itself is unchanged. The unmodified originals are kept in
-  `svg/mono-original/` for reference.
+- Modifications: the original single-color paths were extracted into
+  `glyphs.tsx` so `PieceIcon.tsx` can render each one twice — a `currentColor`
+  body plus an optional contrasting outline underneath. **The path data itself
+  is unchanged**; compare `glyphs.tsx` against `svg/mono-original/`, which is
+  kept verbatim for exactly that purpose.
 
 ## What GPLv2+ requires of you
 Keep this notice and `LICENSE-GPL-2.0.txt` in your project alongside these

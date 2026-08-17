@@ -1,7 +1,7 @@
 "use client";
 
-import { getPieceSymbol } from "@/lib/utils";
 import type { PieceColor, PieceType } from "@/types/chess";
+import { PieceIcon } from "@/components/chessboard/pieces";
 
 const PROMOTION_PIECES: ("q" | "r" | "b" | "n")[] = ["q", "r", "b", "n"];
 
@@ -52,12 +52,7 @@ export default function PromotionModal({
           <button
             key={type}
             className="flex items-center justify-center bg-white hover:bg-amber-200 border border-gray-300 transition-colors cursor-pointer"
-            style={{
-              width: cellSize,
-              height: cellSize,
-              fontSize: cellSize * 0.65,
-              lineHeight: 1,
-            }}
+            style={{ width: cellSize, height: cellSize }}
             onClick={(e) => {
               e.stopPropagation();
               onSelect(type as "q" | "r" | "b" | "n");
@@ -73,7 +68,7 @@ export default function PromotionModal({
                     : "Knight"
             }
           >
-            {getPieceSymbol(type, color)}
+            <PieceIcon type={type} color={color} size={cellSize * 0.8} outline />
           </button>
         ))}
       </div>

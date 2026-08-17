@@ -8,9 +8,9 @@
 > related group) at a time, explain the change, and stop for review before moving on. Do not
 > batch a whole phase into a single sweep.
 >
-> **Progress:** step 0 and Phases 0–2 are ✅ done — except two Phase 0 items explicitly deferred
-> to Phase 4 (draw notifications, the `duration: 999999` hack). Phase 3 (board visuals: piece
-> wiring, geometry consolidation, board flip, responsive) is next.
+> **Progress:** step 0 and Phases 0–2 are ✅ done, plus Phase 3's **piece wiring**. Two Phase 0
+> items remain deferred to Phase 4 (draw notifications, the `duration: 999999` hack).
+> Next in Phase 3: geometry consolidation → board flip → square rendering → responsive.
 >
 > A copy of this document lives at `docs/UI_PLAN.md`; re-copy it whenever this file changes.
 
@@ -82,7 +82,7 @@ The three `makeMove` call sites in `chessboard.tsx` (click, drag-end, promotion-
 pattern `useGameNotifications` already uses: put the event in the store and let hooks react to
 `positionVersion`.
 
-- [ ] Add to `useGameStore`:
+- [x] Add to `useGameStore`:
       ```ts
       type MoveEvent = {
         san: string;
@@ -161,10 +161,10 @@ layer or the persisted store.
       | anything else | `move` |
 
       Only the first match fires — a capture that also gives check plays `check`, not both.
-- [ ] `illegal` is **not** part of that chain. It fires from `handleDragEnd` in `chessboard.tsx`
+- [x] `illegal` is **not** part of that chain. It fires from `handleDragEnd` in `chessboard.tsx`
       when `over` exists but is not in `targets` — the one moment the player expressed intent and
       currently gets nothing back. A drag released off-board (`over == null`) stays silent.
-- [ ] `src/store/useSettingsStore.ts` — zustand + `persist` middleware, holding `muted`,
+- [x] `src/store/useSettingsStore.ts` — zustand + `persist` middleware, holding `muted`,
       `orientation`, `showCoordinates`. A mute toggle button next to Undo/Reset.
 - [ ] Respect `prefers-reduced-motion` for animation only, not audio.
 
@@ -181,26 +181,51 @@ No autoplay problem: sounds only fire after a move, which is always a user gestu
 ### Piece art
 `PieceIcon` is **already written** and delivered — this phase is wiring, not authoring.
 
-- [ ] Relocate the pack first (see *Asset inventory*), then verify it type-checks in isolation.
-- [ ] `PieceIcon` (`type`, `color`, `size`, `outline`) as the single render point. Replaces
+- [x] Relocate the pack first (see *Asset inventory*), then verify it type-checks in isolation.
+- [x] `PieceIcon` (`type`, `color`, `size`, `outline`) as the single render point. Replaces
       `getPieceSymbol` in [draggablePiece.tsx](src/components/chessboard/draggablePiece.tsx),
       the `DragOverlay` ([chessboard.tsx:487-504](src/components/chessboard/chessboard.tsx#L487-L504)),
       [PlayerSection.tsx:84](src/components/sidebar/PlayerSection.tsx#L84), and
       `promotionModal.tsx`. Keep `getPieceSymbol` in [lib/utils.ts](src/lib/utils.ts) only if
       something still needs text.
-- [ ] Pieces size to the measured `cell` value, so `text-5xl` in `draggablePiece.tsx` goes away
+- [x] Pieces size to the measured `cell` value, so `text-5xl` in `draggablePiece.tsx` goes away
       and the board becomes size-independent. `PieceIcon` accepts `size` in px and falls back to
       `100%` when omitted — passing `cell` directly is the intended usage.
-- [ ] `PieceIcon` takes chess.js codes (`"n"`, `"w"`) as well as full names, so `PieceVM` values
+- [x] `PieceIcon` takes chess.js codes (`"n"`, `"w"`) as well as full names, so `PieceVM` values
       pass straight through with no mapping layer. ✅ `PieceVM` was tightened during step 0, so
       this now type-checks. Remaining: the `as PieceType` cast at
       [chessboard.tsx:466](src/components/chessboard/chessboard.tsx#L466) is redundant once
       `getPieceSymbol` is replaced — delete it with the swap.
-- [ ] Note it renders its own `role="img"` + `aria-label` from `type`/`color`. That is the
+- [x] Note it renders its own `role="img"` + `aria-label` from `type`/`color`. That is the
       accessible name for pieces — so in Phase 6, label the *square*, not the piece, or the two
       will fight. Pass `title` when a more specific label is wanted.
-- [ ] Sidebar captured pieces currently render at `text-[1.4rem]`; give `PieceIcon` an explicit
+- [x] Sidebar captured pieces currently render at `text-[1.4rem]`; give `PieceIcon` an explicit
       px `size` there instead, and drop the `outline` halo at that scale if it muddies.
+
+**Piece wiring done — verified in a real browser, not just by types.** All four render sites
+swapped: `draggablePiece.tsx`, the `DragOverlay` in `chessboard.tsx`, `promotionModal.tsx`
+(icons at `cellSize * 0.8`), and `PlayerSection.tsx` (22px). The text-era styling those sites
+carried — `text-5xl`, `lineHeight`, `textAlign`, `fontSize: cellSize * 0.65` — is gone; SVGs
+size themselves from `size`.
+
+Screenshots confirmed 32 pieces on the opening board with both colours legible on both square
+shades, the promotion picker rendering four icons with the queen adjacent to the promotion
+square, and captured pieces reading correctly in the navy sidebar.
+
+**Outline is now opt-in.** `PieceIcon`'s `outline` defaults to `false` (the mono set's native
+look) and all four render sites pass it explicitly, so it can be dropped app-wide by deleting
+four props. The halo was also thinned from **1.9 → 0.9** viewBox units — 1.9 read as a heavy
+sticker edge — and exposed as an `outlineWidth` prop for per-site tuning.
+
+Both extremes were checked in the browser: with no outline at all, white pieces wash out against
+the `#f0d9b5` light squares and black captured pieces nearly vanish against the navy sidebar;
+at 1.9 everything looks stickered. 0.9 defines the edge without either problem.
+
+`getPieceSymbol` in [lib/utils.ts](src/lib/utils.ts) is now referenced only by the dead
+`capturedPieces/` folder; Phase 6 removes both together.
+
+Incidental find: the app serves **no favicon** — `/favicon.ico`, `/icon.png` and
+`/apple-icon.png` all 404. Pre-existing and cosmetic; added to Phase 6.
 
 ### Geometry consolidation (prerequisite for board flip)
 - [ ] `src/lib/boardGeometry.ts` — `idxToSquare`, `parseSquare`, `squareToXY`, `isPromotionMove`,
@@ -360,6 +385,16 @@ three `alt=` attributes and nothing else.
       `isLegal` import at [chessboard.tsx:72](src/components/chessboard/chessboard.tsx#L72), the
       commented `--color-pawnstorm-blue` alternate and unused `--color-pawnstorm-gold-hov` in
       `globals.css`.
+- [x] **Favicon — done.** Was 404 on every variant. Generated from the pawn mark in
+      `public/images/Pawnstorm.svg` (paths 9–10 are the mark; the other 9 are the outlined
+      wordmark, illegible at 16px). `src/app/` now holds `favicon.ico` (16/32/48), `icon.svg`,
+      and `apple-icon.png` (180, full-bleed since iOS applies its own mask). Next emits the
+      link tags automatically.
+
+      Two traps if this is ever regenerated: **Turbopack's ICO decoder rejects non-RGBA PNG
+      payloads** — an opaque render 500s *every route*, not just the icon — and the paths carry
+      `fill="currentColor"`, which resolves to the CSS `color` property, not a parent `fill`,
+      so it must be stripped or `color` set explicitly.
 - [ ] Filename casing is split — `sidebar/GameSidebar.tsx`, `PlayerSection.tsx`,
       `MoveHistory.tsx` are PascalCase; everything else in the repo is camelCase. Pick one.
 - [ ] The only lint warning in the repo: an unused `eslint-disable` for
@@ -451,9 +486,12 @@ were unused and always would be, since pieces render dynamically by type.
 - **Fix the relative license paths** in the header comments of `PieceIcon.tsx` and `glyphs.tsx` —
   both point at `../../../../LICENSE-GPL-2.0.txt`, which breaks on the move. They become
   `./LICENSE-GPL-2.0.txt` and `./NOTICE.md`.
-- Keep `svg/` including `svg/mono-original/` — `NOTICE.md` cites it as the unmodified source,
-  which is what makes the "only the fill/stroke layering changed" claim verifiable. Unused at
-  runtime (`glyphs.tsx` has the paths inline), but cheap and it backs the notice.
+- Keep **`svg/mono-original/` only** — `NOTICE.md` cites it as the unmodified source, which is
+  what makes the "only the fill/stroke layering changed" claim verifiable. The twelve derived
+  `white-*`/`black-*` files were deleted: nothing imported them, and as pre-baked snapshots of
+  the two-layer render they silently drifted out of sync the moment `PieceIcon` changed. The
+  outline is a render-time boolean over a single path, not baked geometry, so there is no
+  "outlined asset" to keep.
 - Delete the pack's `README.md` — its wiring notes are captured in Phase 3 above, and
   `PieceIcon.tsx` is 70 typed lines that document themselves.
 - Then delete the empty `src/components/pieces/` shell.

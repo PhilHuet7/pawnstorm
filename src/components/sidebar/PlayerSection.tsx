@@ -1,6 +1,8 @@
-import { getPieceSymbol } from "@/lib/utils";
 import type { PieceSymbol } from "chess.js";
-import { PieceType } from "@/types/chess";
+import { PieceIcon } from "@/components/chessboard/pieces";
+
+/** Captured pieces render small; big enough to read, small enough to crowd a row. */
+const CAPTURED_SIZE = 22;
 
 export const PIECE_VALUES: Record<PieceSymbol, number> = {
   q: 9,
@@ -79,9 +81,14 @@ const PlayerSection = ({
             g.pieces.map((p, i) => (
               <span
                 key={`${g.type}-${i}`}
-                className="text-[1.4rem] leading-none select-none animate-capturedPieceIn text-gray-200 -ml-2 first-of-type:ml-0"
+                className="leading-none select-none animate-capturedPieceIn -ml-2 first-of-type:ml-0"
               >
-                {getPieceSymbol(p as PieceType, capturedColor)}
+                <PieceIcon
+                  type={p}
+                  color={capturedColor}
+                  size={CAPTURED_SIZE}
+                  outline
+                />
               </span>
             )),
           )

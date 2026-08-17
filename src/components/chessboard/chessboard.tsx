@@ -12,9 +12,10 @@ import {
   type Modifier,
 } from "@dnd-kit/core";
 import { useGameStore } from "@/store/useGameStore";
-import { createBoardFromFEN, getPieceSymbol } from "@/lib/utils";
+import { createBoardFromFEN } from "@/lib/utils";
 import type { Square } from "chess.js";
-import { PieceType, PieceVM } from "@/types/chess";
+import { PieceVM } from "@/types/chess";
+import { PieceIcon } from "@/components/chessboard/pieces";
 import DroppableSquare from "@/components/chessboard/droppableSquare";
 import DraggablePiece from "@/components/chessboard/draggablePiece";
 import PromotionModal from "@/components/chessboard/promotionModal";
@@ -476,7 +477,7 @@ const Chessboard = () => {
                       else map.delete(p.id);
                     }}
                   >
-                    {getPieceSymbol(p.type as PieceType, p.color)}
+                    <PieceIcon type={p.type} color={p.color} size={cell} outline />
                   </DraggablePiece>
                 );
               })}
@@ -504,14 +505,16 @@ const Chessboard = () => {
                 display: "block",
                 width: `${cellSize}px`,
                 height: `${cellSize}px`,
-                lineHeight: `${cellSize}px`,
-                textAlign: "center",
-                fontSize: "3rem",
                 cursor: "grabbing",
                 userSelect: "none",
               }}
             >
-              {getPieceSymbol(activePiece.type as PieceType, activePiece.color)}
+              <PieceIcon
+                type={activePiece.type}
+                color={activePiece.color}
+                size={cellSize}
+                outline
+              />
             </span>
           ) : null}
         </DragOverlay>
